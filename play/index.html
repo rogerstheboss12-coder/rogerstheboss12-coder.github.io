@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0c1430">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' capacitor: https: data: blob: 'unsafe-inline'; img-src 'self' data: blob: capacitor: https:; media-src 'self' data: blob: capacitor:; connect-src 'self' https: capacitor:">
+<title>Star-Spangled Tycoon</title>
+<meta name="description" content="Play Star-Spangled Tycoon free in your browser: build a ridiculous parody political empire, then keep going on iPhone and iPad.">
+<meta property="og:title" content="Star-Spangled Tycoon — play free in your browser">
+<meta property="og:description" content="Build a ridiculous parody political empire. Vote in the Great 2026 Parody Election!">
+<meta property="og:image" content="https://rogerstheboss12-coder.github.io/play/assets/branding/icon_1024.png">
+<meta property="og:url" content="https://rogerstheboss12-coder.github.io/play/">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="assets/icons/w1_b10.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="bg" aria-hidden="true"><div id="bg-img"></div><div id="bg-stars"></div><div id="bg-shade"></div></div>
+
+<div id="app">
+  <aside id="sidebar">
+    <button id="world-badge" aria-label="Star Map">
+      <div id="world-planet"></div>
+      <div>
+        <div id="world-name">Earth</div>
+        <div id="world-title">Make America Orbital</div>
+      </div>
+    </button>
+    <nav id="menu" aria-label="Main menu">
+      <button data-panel="upgrades"><span class="mi" aria-hidden="true">⬆️</span><span class="ml" data-t="Upgrades">Upgrades</span><span class="badge" id="b-upgrades"></span></button>
+      <button data-panel="managers"><span class="mi" aria-hidden="true">🎩</span><span class="ml" data-t="Cabinet">Cabinet</span><span class="badge" id="b-managers"></span></button>
+      <button data-panel="election" id="nav-election"><span class="mi" aria-hidden="true">🗳️</span><span class="ml" id="ml-election">Election</span><span class="badge" id="b-election"></span></button>
+      <button data-panel="missions"><span class="mi" aria-hidden="true">🎯</span><span class="ml" data-t="Missions">Missions</span><span class="badge" id="b-missions"></span></button>
+      <button data-panel="store"><span class="mi" aria-hidden="true">🦅</span><span class="ml" data-t="Store">Store</span><span class="badge gold" id="b-store"></span></button>
+      <button data-panel="unlocks" class="nav-secondary"><span class="mi" aria-hidden="true">🏆</span><span class="ml" data-t="Unlocks">Unlocks</span><span class="badge" id="b-unlocks"></span></button>
+      <button data-panel="worlds" class="nav-secondary"><span class="mi" aria-hidden="true">🪐</span><span class="ml" data-t="Star Map">Star Map</span><span class="badge" id="b-worlds"></span></button>
+      <button data-panel="pass" class="nav-secondary" id="nav-pass" style="display:none"><span class="mi" aria-hidden="true">✪</span><span class="ml" data-t="Liberty Pass">Liberty Pass</span><span class="badge" id="b-pass"></span></button>
+      <button data-panel="race" class="nav-secondary" id="nav-race" style="display:none"><span class="mi" aria-hidden="true">🚀</span><span class="ml" data-t="Space Race">Space Race</span><span class="badge" id="b-race"></span></button>
+      <button data-panel="orders" class="nav-secondary" id="nav-orders" style="display:none"><span class="mi" aria-hidden="true">📜</span><span class="ml" data-t="Executive Orders">Executive Orders</span><span class="badge" id="b-orders"></span></button>
+      <button data-panel="library" class="nav-secondary"><span class="mi" aria-hidden="true">🏛️</span><span class="ml" data-t="Presidential Library">Presidential Library</span></button>
+      <button data-panel="daily" class="nav-secondary"><span class="mi" aria-hidden="true">📅</span><span class="ml" data-t="Daily Reward">Daily Reward</span><span class="badge" id="b-daily"></span></button>
+      <button data-panel="settings" class="nav-secondary"><span class="mi" aria-hidden="true">⚙️</span><span class="ml" data-t="Settings">Settings</span></button>
+      <button data-panel="more" class="nav-more"><span class="mi" aria-hidden="true">☰</span><span class="ml" data-t="More">More</span><span class="badge" id="b-more"></span></button>
+    </nav>
+    <button id="speech-btn">
+      <span class="sb-top">🎤 <span data-t="Stump Speech">Stump Speech</span></span>
+      <span class="sb-sub" id="speech-sub">×2 profit for 4 hours</span>
+    </button>
+  </aside>
+
+  <main id="main">
+    <header id="topbar">
+      <button id="world-mini" aria-label="Star Map"></button>
+      <div id="cash-box" aria-live="off">
+        <div id="cash"><span id="cash-num">$0</span> <span id="cash-word"></span></div>
+        <div id="income"><span id="income-num">$0</span> <span data-t="per second">per second</span></div>
+      </div>
+      <div id="top-right">
+        <div id="boosts"></div>
+        <button id="lb-box" aria-label="Liberty Bucks">
+          <span class="lb-icon" aria-hidden="true">★</span><span id="lb-num">0</span>
+        </button>
+        <button id="buy-mode" aria-label="Buy quantity">Buy<br><b>×1</b></button>
+      </div>
+    </header>
+    <div id="ticker" aria-hidden="true"><div id="ticker-inner"></div></div>
+    <nav id="hub" aria-label="Events and rewards"></nav>
+    <div id="mechanic-bar" role="status"></div>
+    <section id="businesses" aria-label="Businesses"></section>
+  </main>
+</div>
+
+<div id="fx-layer" aria-hidden="true"></div>
+<div id="toasts" role="status" aria-live="polite"></div>
+<div id="modal-root"></div>
+<div id="tutorial-layer" aria-live="polite"></div>
+<div id="cinematic"></div>
+
+<script>window.addEventListener("error",function(e){console.error("JSERR "+e.message+" @ "+(e.filename||"")+":"+e.lineno)});window.addEventListener("unhandledrejection",function(e){console.error("JSREJECT "+(e.reason&&(e.reason.stack||e.reason.message)||e.reason))});</script>
+<script src="js/build-config.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/lang-es.js"></script>
+<script src="js/lang-es-live.js"></script>
+<script src="js/lang-es-events.js"></script>
+<script src="js/lang-es-extras.js"></script>
+<script src="js/data.js"></script>
+<script src="js/events-content-1.js"></script>
+<script src="js/events-content-2.js"></script>
+<script src="js/events-content-3.js"></script>
+<script src="js/events-data.js"></script>
+<script src="js/live-data.js"></script>
+<script src="js/extras-data.js"></script>
+<script src="js/codex-data.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/live.js"></script>
+<script src="js/extras.js"></script>
+<script src="js/leagues.js"></script>
+<script src="js/format.js"></script>
+<script src="js/portraits.js"></script>
+<script src="js/platform.js"></script>
+<script src="js/analytics.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/tutorial.js"></script>
+<script src="js/live-ui.js"></script>
+<script src="js/extras-ui.js"></script>
+<script src="js/campaign.js"></script>
+<script src="js/demo.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

@@ -44,6 +44,7 @@
 
 <h2>7b. Leaderboards and Game Center</h2>
 <p><strong>Event and Showdown leaderboards.</strong> To rank you against other players in groups of up to 100, the Game sends our leaderboard server a random player identifier created by the Game, a display name generated from a fixed list of words (for example "Governor Otis of New Ohio"; you can pick a new one in Settings), which leaderboard it is for, and your score on it. Other players in your group can see your display name and score. The server does not store your IP address, device identifiers or any account information, and deletes leaderboard entries after 30 days. When you are offline, or if the server is unavailable, the Game shows computer-controlled rivals instead (marked 🤖), and nothing is sent.</p>
+<p><strong>Campaign votes and invite codes.</strong> If you vote in Campaign HQ, the Game sends our server the same random player identifier and your choice of candidate, so there is one vote per player. Only vote totals are ever shown. If you use invite codes, the server stores your code, your random player identifier, and which code a new player entered, so it can count friends and pay rewards once. The browser demo sends a separate random identifier when you vote. None of this is linked to your identity.</p>
 <p><strong>Game Center.</strong> If you are signed in to Apple's Game Center, the Game reports your scores on a few leaderboards and some achievements to Apple. This is handled by Apple under <a href="https://www.apple.com/legal/privacy/">Apple's privacy policy</a>; we do not receive your Game Center identity.</p>
 
 <h2>8. Children</h2>
@@ -57,6 +58,7 @@
   <tr><td>Advertising data (optional ads only)</td><td>Google AdMob</td><td>Serving and measuring rewarded ads</td></tr>
   <tr><td>Anonymous gameplay events (optional)</td><td>TelemetryDeck</td><td>Improving and balancing the game</td></tr>
   <tr><td>Random player ID, generated name, leaderboard scores</td><td>Our leaderboard server (Cloudflare), other players in your group</td><td>Event and Showdown leaderboards</td></tr>
+  <tr><td>Random player ID, campaign vote, invite code and redemptions</td><td>Our server (Cloudflare)</td><td>Campaign vote totals and invite rewards</td></tr>
   <tr><td>Game Center scores and achievements (if signed in)</td><td>Apple Game Center</td><td>Game Center leaderboards and achievements</td></tr>
 </table>
 
