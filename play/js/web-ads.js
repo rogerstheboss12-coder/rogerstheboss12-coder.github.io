@@ -66,18 +66,15 @@
   }
 
   // ---------------- CrazyGames ----------------
+  // The SDK script is in the page head (build.mjs); Platform initialises it before loading the save.
   function loadCrazyGames() {
-    var s = document.createElement('script');
-    s.src = 'https://sdk.crazygames.com/crazygames-sdk-v3.js';
-    s.onload = function () {
-      var sdk = root.CrazyGames && root.CrazyGames.SDK;
-      if (!sdk) return;
-      Promise.resolve(sdk.init()).then(function () {
-        cg = sdk;
-        try { sdk.game.loadingStop(); sdk.game.gameplayStart(); } catch (e) {}
-      }).catch(function () {});
-    };
-    document.head.appendChild(s);
+    var sdk = root.CrazyGames && root.CrazyGames.SDK;
+    if (!sdk || !root.Platform) return;
+    root.Platform.cgReady.then(function (ok) {
+      if (!ok) return;
+      cg = sdk;
+      try { sdk.game.loadingStop(); sdk.game.gameplayStart(); } catch (e) {}
+    });
   }
   function cgAd(kind) {
     return new Promise(function (res) {

@@ -175,6 +175,13 @@
   function tE(s, v) { return UI.tE(s, v); }
   function esc(s) { return UI.esc(s); }
   var APP_URL = 'https://apps.apple.com/app/id6816208938';
+  // Where invite links point: CrazyGames allows no outbound links; web builds use the website until the app is live.
+  function inviteUrl() {
+    var B = root.BUILD || {};
+    if (B.portal === 'crazygames') return 'https://www.crazygames.com/game/star-spangled-tycoon';
+    if (B.web && B.appLive === false) return (B.siteUrl || 'https://rogerstheboss12-coder.github.io/') + 'play/';
+    return APP_URL;
+  }
 
   UI.PANELS.campaign = function () {
     var s = S(), t = E.now(), c = state(s), body = '';
@@ -255,7 +262,7 @@
     campaignShare: function () {
       var code = state(S()).invite.code;
       if (!code) return;
-      share(T('Build a ridiculous political empire with me in Star-Spangled Tycoon! Use my code {code} for ★{n} free: {url}', { code: code, n: CFG.invite.newPlayer, url: APP_URL }));
+      share(T('Build a ridiculous political empire with me in Star-Spangled Tycoon! Use my code {code} for ★{n} free: {url}', { code: code, n: CFG.invite.newPlayer, url: inviteUrl() }));
       if (root.Analytics) root.Analytics.track('invite_share', {});
     },
     campaignEnter: function (d) {

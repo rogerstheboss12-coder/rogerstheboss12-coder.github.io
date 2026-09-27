@@ -40,11 +40,37 @@
 
   // ---------------- Storage ----------------
   var KEY = 'starSpangledTycoon.save.v1';
-  function readLocal() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
-  function writeLocal(v) { try { localStorage.setItem(KEY, v); } catch (e) {} }
+  // CrazyGames build: saves go through the CrazyGames SDK Data Module (synced to the player's CrazyGames account;
+  // their rules say not to rely on local saves). Everything waits for SDK.init(), which preloads the data.
+  var CG = !native && !!(root.BUILD && root.BUILD.portal === 'crazygames');
+  var cgData = null;
+  var cgReady = !CG ? Promise.resolve(false) : new Promise(function (res) {
+    var sdk = root.CrazyGames && root.CrazyGames.SDK;
+    if (!sdk) return res(false);
+    var t = setTimeout(function () { res(false); }, 8000);
+    Promise.resolve(sdk.init()).then(function () { clearTimeout(t); cgData = sdk.data; try { sdk.game.loadingStart(); } catch (e) {} res(true); }, function () { clearTimeout(t); res(false); });
+  });
+  function readLocal() {
+    if (cgData) { try { return cgData.getItem(KEY); } catch (e) { return null; } }
+    try { return localStorage.getItem(KEY); } catch (e) { return null; }
+  }
+  function writeLocal(v) {
+    if (cgData) { try { cgData.setItem(KEY, v); } catch (e) { console.warn('[platform] CrazyGames save', e && e.message); } return; }
+    try { localStorage.setItem(KEY, v); } catch (e) {}
+  }
 
   // Loads the best available save from device storage, iCloud and web storage.
   function loadSave() {
+    return cgReady.then(function () {
+      // One-time move of a browser save made before the Data Module was available.
+      if (cgData && !readLocal()) {
+        var old = null; try { old = localStorage.getItem(KEY); } catch (e) {}
+        if (old) writeLocal(old);
+      }
+      return loadSaveNow();
+    });
+  }
+  function loadSaveNow() {
     var cands = [readLocal()];
     var prefs = plugin('Preferences'), cloud = plugin('CloudSave');
     return Promise.all([
@@ -76,6 +102,7 @@
     if (cloud && (force || t - lastCloud > 30000)) { lastCloud = t; safe(cloud.set({ key: KEY, value: raw })); }
   }
   function clearSave() {
+    if (cgData) { try { cgData.removeItem(KEY); } catch (e) {} }
     try { localStorage.removeItem(KEY); } catch (e) {}
     var prefs = plugin('Preferences'), cloud = plugin('CloudSave');
     if (prefs) safe(prefs.remove({ key: KEY }));
@@ -315,7 +342,7 @@
   }
 
   root.Platform = {
-    native: native, android: android, demo: DEMO, web: WEB, ADS: ADS,
+    native: native, android: android, demo: DEMO, web: WEB, ADS: ADS, cgReady: cgReady,
     storeName: android ? 'Google Play' : 'App Store',
     loadSave: loadSave, writeSave: writeSave, clearSave: clearSave, readLocal: readLocal,
     syncTime: syncTime, now: now, isVerified: function () { return verified; },
