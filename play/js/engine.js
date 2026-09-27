@@ -768,9 +768,40 @@
     });
   }
 
+  // A save's own version number, or 0 when the text isn't a save at all (used to refuse imports from newer builds).
+  function saveVersion(str) {
+    try { var s = JSON.parse(str); return s && typeof s === 'object' && Array.isArray(s.worlds) ? (+s.v || 1) : 0; } catch (e) { return 0; }
+  }
+  // A finite number at or above `min` (capped at MAX), otherwise the default.
+  function num(v, d, min) { return typeof v === 'number' && isFinite(v) && v >= (min || 0) ? Math.min(v, MAX) : d; }
+  function sanitizeWorld(got, def) {
+    ['cash', 'runEarned', 'lifetime', 'angels', 'angelsSpent', 'elections', 'loopCharges', 'loopClock'].forEach(function (k) {
+      if (k in def) got[k] = num(got[k], def[k]);
+    });
+    if (got.cash < 0) got.cash = 0;
+    got.biz = def.biz.map(function (d, i) {
+      var b = got.biz[i];
+      if (!b || typeof b !== 'object') return d;
+      b.owned = Math.floor(num(b.owned, d.owned));
+      b.progress = num(b.progress, 0);
+      return b;
+    });
+    ['upgrades', 'angelUpgrades', 'missionsDone', 'eventClaimed'].forEach(function (k) {
+      if (k in def && (!got[k] || typeof got[k] !== 'object' || Array.isArray(got[k]))) got[k] = def[k];
+    });
+    if (!Array.isArray(got.effects)) got.effects = [];
+  }
+
   function deserialize(str) {
-    var s = migrate(JSON.parse(str));
+    var raw = JSON.parse(str);
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !Array.isArray(raw.worlds)) throw new Error('not a save');
+    var s = migrate(raw);
     var base = newState();
+    if (!Array.isArray(s.unlocked)) s.unlocked = base.unlocked;
+    ['created', 'lastSeen', 'maxTime', 'lb', 'permMult', 'permBought', 'offlineBought', 'rallyUntil', 'speechUntil', 'badges', 'amendments', 'conventions'].forEach(function (k) {
+      if (s[k] !== undefined) s[k] = num(s[k], base[k]);
+    });
+    if (!(s.permMult >= 1)) s.permMult = 1;
     ['v', 'created', 'lastSeen', 'maxTime', 'world', 'lb', 'permMult', 'permBought', 'offlineBought', 'rallyUntil', 'speechUntil',
       'badges', 'amendments', 'conventions', 'iap', 'ads', 'daily', 'achievements', 'stats', 'settings', 'seenIntro', 'tutorial'].forEach(function (k) {
       if (s[k] === undefined) s[k] = base[k];
@@ -785,6 +816,7 @@
       var def = newWorldState(w), got = s.worlds && s.worlds[wi];
       if (!got || !got.biz || got.biz.length !== def.biz.length) return def;
       Object.keys(def).forEach(function (k) { if (got[k] === undefined) got[k] = def[k]; });
+      sanitizeWorld(got, def);
       // v1.0 mission ids were list positions ('m0_12'); map them to the stable ids.
       var legacy = D.LEGACY_MISSIONS && D.LEGACY_MISSIONS[wi];
       if (legacy && got.missionsDone) Object.keys(got.missionsDone).forEach(function (id) {
@@ -794,6 +826,7 @@
       });
       return got;
     });
+    s.unlocked[0] = true;
     if (!(s.world >= 0 && s.world < D.WORLDS.length) || !s.unlocked[s.world]) s.world = 0;
     return s;
   }
@@ -825,6 +858,6 @@
     claimMission: claimMission, claimMissionFull: claimMissionFull, claimableMissions: claimableMissions,
     dayKey: dayKey, dailyStatus: dailyStatus, claimDaily: claimDaily,
     checkAchievements: checkAchievements, storePrice: storePrice, storeOwned: storeOwned, buyStore: buyStore, grantIAP: grantIAP, adsToday: adsToday,
-    giveSpeech: giveSpeech, serialize: serialize, deserialize: deserialize, progressScore: progressScore, isMain: isMain
+    giveSpeech: giveSpeech, serialize: serialize, deserialize: deserialize, saveVersion: saveVersion, progressScore: progressScore, isMain: isMain
   };
 })(typeof window !== 'undefined' ? window : globalThis);

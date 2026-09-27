@@ -663,5 +663,15 @@ I18N.register('es', {
   "×2 profit for 4 hours": "Ganancias ×2 durante 4 horas",
   "×2 profit · {t} remaining": "Ganancias ×2 · quedan {t}",
   "≈ {x} now": "≈ {x} ahora",
-  "▶ Watch ad: ×2 for 4h": "▶ Ver anuncio: ×2 durante 4 h"
+  "▶ Watch ad: ×2 for 4h": "▶ Ver anuncio: ×2 durante 4 h",
+  "Progress not saved": "Progreso no guardado",
+  "Your browser storage is full or blocked. Export a backup code in Settings to keep your empire safe.": "El almacenamiento de tu navegador está lleno o bloqueado. Exporta un código de respaldo en Ajustes para proteger tu imperio.",
+  "That save is from a newer version of the game. Update first, then import it.": "Esa partida es de una versión más nueva del juego. Actualiza primero y luego impórtala.",
+  "Save recovered": "Partida recuperada",
+  "Your save couldn't be read, so we restored your most recent backup ({time}). A little recent progress may be missing.": "No se pudo leer tu partida, así que restauramos tu copia de seguridad más reciente ({time}). Puede faltar algo de progreso reciente.",
+  "Save couldn't be read": "No se pudo leer la partida",
+  "Your save was damaged and no backup could be loaded, so a new game was started. The damaged save has been kept on this device — contact support and we'll try to recover it.": "Tu partida estaba dañada y no se pudo cargar ninguna copia de seguridad, así que se empezó una nueva. La partida dañada se ha conservado en este dispositivo: contacta con soporte e intentaremos recuperarla.",
+  "All worlds, Liberty Bucks and achievements saved in this browser will be erased.": "Se borrarán todos los mundos, Libertólares y logros guardados en este navegador.",
+  "Your empire autosaves to your CrazyGames account. Export a backup code to keep a copy.": "Tu imperio se guarda automáticamente en tu cuenta de CrazyGames. Exporta un código de respaldo para conservar una copia.",
+  "Your empire autosaves in this browser. Clearing site data erases it, so export a backup code to keep a copy.": "Tu imperio se guarda automáticamente en este navegador. Borrar los datos del sitio lo elimina, así que exporta un código de respaldo para conservar una copia."
 });

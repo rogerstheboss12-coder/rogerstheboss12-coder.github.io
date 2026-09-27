@@ -19,9 +19,14 @@
     'God bless America — and every planet near it!'
   ];
 
+  var saveWarnedAt = 0;
   function save(force) {
     if (resetting || !S) return;
-    PL.writeSave(E.serialize(S), force);
+    if (PL.writeSave(E.serialize(S), force) === false && Date.now() - saveWarnedAt > 10 * 60 * 1000) {
+      // Storage full or blocked: tell the player (at most every 10 minutes) instead of failing silently.
+      saveWarnedAt = Date.now();
+      FX.toast('⚠️', T('Progress not saved'), T('Your browser storage is full or blocked. Export a backup code in Settings to keep your empire safe.'));
+    }
   }
 
   function W() { return D.WORLDS[S.world]; }
@@ -270,6 +275,7 @@
     var t = document.getElementById('import-text');
     try {
       var json = decodeURIComponent(escape(atob(t.value.trim())));
+      if (E.saveVersion(json) > E.SAVE_VERSION) { FX.toast('⚠️', T('Import failed'), T('That save is from a newer version of the game. Update first, then import it.')); return; }
       var ns = E.deserialize(json);
       if (XU) XU.snapshot('import');
       PL.writeSave(E.serialize(ns), true);
@@ -278,7 +284,7 @@
     } catch (e) { FX.toast('⚠️', T('Import failed'), T('That code doesn\'t look like a save.')); }
   };
   ACT.hardReset = function () {
-    UI.modal(UI.head('⚠️ ' + tE('Reset everything?'), tE('This cannot be undone')) + '<div class="modal-body"><p>' + tE(PL.android ? 'All worlds, Liberty Bucks and achievements on this device will be erased. Purchases can be restored.' : 'All worlds, Liberty Bucks and achievements on this device and in iCloud will be erased. Purchases can be restored.') + '</p><div class="dialog-actions"><button class="btn blue" data-act="close">' + tE('Keep playing') + '</button><button class="btn red" data-act="hardResetConfirm">' + tE('Erase my empire') + '</button></div></div>', 'small');
+    UI.modal(UI.head('⚠️ ' + tE('Reset everything?'), tE('This cannot be undone')) + '<div class="modal-body"><p>' + tE(!PL.native ? 'All worlds, Liberty Bucks and achievements saved in this browser will be erased.' : PL.android ? 'All worlds, Liberty Bucks and achievements on this device will be erased. Purchases can be restored.' : 'All worlds, Liberty Bucks and achievements on this device and in iCloud will be erased. Purchases can be restored.') + '</p><div class="dialog-actions"><button class="btn blue" data-act="close">' + tE('Keep playing') + '</button><button class="btn red" data-act="hardResetConfirm">' + tE('Erase my empire') + '</button></div></div>', 'small');
   };
   ACT.hardResetConfirm = function () {
     resetting = true;
@@ -1010,8 +1016,17 @@
     setTimeout(PL.hideSplash, 8000); // safety net
     PL.loadSave().then(function (raw) {
       var loaded = null;
-      if (raw) { try { loaded = E.deserialize(raw); } catch (e) { console.warn('Bad save, starting fresh', e); } }
-      S = loaded || E.newState();
+      if (raw) { try { loaded = E.deserialize(raw); } catch (e) { console.warn('Bad save', e); } }
+      if (loaded || PL.loadIssue() !== 'damaged') return { state: loaded };
+      // The save couldn't be read: fall back to the newest rolling backup that loads before starting over.
+      return PL.loadBackups().then(function (list) {
+        for (var i = 0; i < list.length; i++) {
+          try { if (list[i] && list[i].data) return { state: E.deserialize(list[i].data), restoredFrom: list[i].t || 0 }; } catch (e) { console.warn('Bad backup', i, e); }
+        }
+        return { state: null, lost: true };
+      });
+    }).then(function (res) {
+      S = res.state || E.newState();
       root.Game.state = function () { return S; };
       E.setClock(PL.now);
       I18N.setLang(S.settings.lang);
@@ -1045,6 +1060,12 @@
       PL.syncTime().then(function (v) { applyOffline(v); if (!lastOffline) maybeDaily(); });
       PL.initStore(D.IAP.map(function (p) { return p.id; }), onTransaction).then(function () { UI.refreshPanel(true); });
       raf(function (t) { last = t; raf(function (t2) { PL.hideSplash(); loop(t2); }); });
+      if (res.state && res.restoredFrom !== undefined) {
+        save(true);
+        setTimeout(function () { UI.modal(UI.head('🛟 ' + tE('Save recovered'), '') + '<div class="modal-body"><p>' + tE('Your save couldn\'t be read, so we restored your most recent backup ({time}). A little recent progress may be missing.', { time: res.restoredFrom ? new Date(res.restoredFrom).toLocaleString() : '—' }) + '</p><div class="dialog-actions"><button class="btn" data-act="close">' + tE('Keep playing') + '</button></div></div>', 'small'); }, 600);
+      } else if (res.lost) {
+        setTimeout(function () { UI.modal(UI.head('⚠️ ' + tE('Save couldn\'t be read'), '') + '<div class="modal-body"><p>' + tE('Your save was damaged and no backup could be loaded, so a new game was started. The damaged save has been kept on this device — contact support and we\'ll try to recover it.') + '</p><div class="dialog-actions"><button class="btn" data-act="close">' + tE('Keep playing') + '</button></div></div>', 'small'); }, 600);
+      }
     });
   }
 

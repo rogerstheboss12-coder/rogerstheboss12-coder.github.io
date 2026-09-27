@@ -848,7 +848,7 @@
         if (w.event || !S.unlocked[wi]) return '';
         return '<div>' + tE('{world} all-time earnings', { world: wn(wi) }) + '</div><div>' + F.money(S.worlds[wi].lifetime, w.sym) + '</div>';
       }).join('') + '</div>';
-    body += '<h3>' + tE('Save data') + '</h3><p class="panel-note">' + tE(PL.android ? 'Your empire autosaves on this device and is included in your Android backup. Export a backup code to move it manually.' : 'Your empire autosaves on this device and syncs to iCloud. Export a backup code to move it manually.') + '</p>' +
+    body += '<h3>' + tE('Save data') + '</h3><p class="panel-note">' + tE(!PL.native ? (root.BUILD && root.BUILD.portal === 'crazygames' ? 'Your empire autosaves to your CrazyGames account. Export a backup code to keep a copy.' : 'Your empire autosaves in this browser. Clearing site data erases it, so export a backup code to keep a copy.') : PL.android ? 'Your empire autosaves on this device and is included in your Android backup. Export a backup code to move it manually.' : 'Your empire autosaves on this device and syncs to iCloud. Export a backup code to move it manually.') + '</p>' +
       '<textarea class="save" id="save-text" readonly aria-label="' + tE('Save code') + '">' + (panelTab.settings_save || '') + '</textarea>' +
       '<div class="dialog-actions"><button class="btn blue" data-act="export">' + tE('Export') + '</button><button class="btn" data-act="import">' + tE('Import') + '</button><button class="btn red" data-act="hardReset">' + tE('Reset everything') + '</button></div>';
     if (root.ExtrasUI) body += root.ExtrasUI.backupsSection();

@@ -54,9 +54,10 @@
     if (cgData) { try { return cgData.getItem(KEY); } catch (e) { return null; } }
     try { return localStorage.getItem(KEY); } catch (e) { return null; }
   }
+  // Returns false when the write failed (storage full, blocked, private mode…) so the game can warn the player.
   function writeLocal(v) {
-    if (cgData) { try { cgData.setItem(KEY, v); } catch (e) { console.warn('[platform] CrazyGames save', e && e.message); } return; }
-    try { localStorage.setItem(KEY, v); } catch (e) {}
+    if (cgData) { try { cgData.setItem(KEY, v); return true; } catch (e) { console.warn('[platform] CrazyGames save', e && e.message); return false; } }
+    try { localStorage.setItem(KEY, v); return true; } catch (e) { console.warn('[platform] save', e && e.message); return false; }
   }
 
   // Loads the best available save from device storage, iCloud and web storage.
@@ -79,27 +80,42 @@
     ]).then(function (r) {
       if (r[0] && r[0].value) cands.push(r[0].value);
       if (r[1] && r[1].value) cands.push(r[1].value);
+      // Only saves that actually load are candidates; a damaged one is set aside (never overwritten) for support.
       var best = null, bestScore = -1;
+      loadIssue = null;
       cands.forEach(function (raw, i) {
         if (!raw) return;
         try {
-          var s = JSON.parse(raw);
+          var s = root.Engine.deserialize(raw);
           var sc = root.Engine.progressScore(s) + (i === 2 ? 0.5 : 0);
           if (sc > bestScore) { bestScore = sc; best = raw; }
-        } catch (e) {}
+        } catch (e) {
+          console.warn('[platform] unreadable save', i, e && e.message);
+          loadIssue = 'damaged';
+          stashDamaged(raw);
+        }
       });
       return best;
     });
   }
 
-  var lastCloud = 0;
+  var loadIssue = null, DKEY = KEY + '.damaged';
+  function stashDamaged(raw) {
+    try { if (!localStorage.getItem(DKEY)) localStorage.setItem(DKEY, raw); } catch (e) {}
+    var prefs = plugin('Preferences');
+    if (prefs) safe(prefs.set({ key: DKEY, value: raw }));
+  }
+
+  var lastCloud = 0, saveError = 0;
   function writeSave(raw, force) {
-    writeLocal(raw);
+    saveError = writeLocal(raw) ? 0 : Date.now();
     var prefs = plugin('Preferences'), cloud = plugin('CloudSave');
     if (prefs) safe(prefs.set({ key: KEY, value: raw }));
     // iCloud key-value store is rate-limited; sync at most every 30s unless forced.
     var t = Date.now();
     if (cloud && (force || t - lastCloud > 30000)) { lastCloud = t; safe(cloud.set({ key: KEY, value: raw })); }
+    // Native builds also keep a Preferences copy, so only web storage failing on its own is fatal there.
+    return !saveError || !!prefs;
   }
   function clearSave() {
     if (cgData) { try { cgData.removeItem(KEY); } catch (e) {} }
@@ -345,6 +361,7 @@
     native: native, android: android, demo: DEMO, web: WEB, ADS: ADS, cgReady: cgReady,
     storeName: android ? 'Google Play' : 'App Store',
     loadSave: loadSave, writeSave: writeSave, clearSave: clearSave, readLocal: readLocal,
+    loadIssue: function () { return loadIssue; }, saveError: function () { return saveError; },
     syncTime: syncTime, now: now, isVerified: function () { return verified; },
     readBackups: readBackups, loadBackups: loadBackups, addBackup: addBackup,
     gcAuth: gcAuth, gcSubmit: gcSubmit, gcAchieve: gcAchieve, gcShow: gcShow, gcAvailable: function () { return !!plugin('GameCenter'); }, gcReady: function () { return gcReady; },
