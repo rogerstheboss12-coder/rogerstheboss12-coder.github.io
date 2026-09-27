@@ -614,9 +614,27 @@
   };
   ACT.remindNo = function () { UI.closeAll(); AN.track('remind_answer', { yes: 0 }); };
 
+  // Browser builds: once, after 20 minutes of play, ask for a rating where it helps most (itch.io page, CrazyGames 👍).
+  var ITCH_URL = 'https://starspangledtycoon.itch.io/star-spangled-tycoon';
+  function maybeAskRating() {
+    var B = root.BUILD || {};
+    if (!PL.web || S.live.seen.rateAsk || !S.tutorial.done || S.stats.playtime < 1200) return false;
+    S.live.seen.rateAsk = true;
+    AN.track('rate_ask', { p: B.portal || 'site' });
+    var text = B.portal === 'itch' ? T('Enjoying the campaign, President? A quick rating on itch.io helps other players find us. Scroll down below the game and click <b>Rate this game</b>. Thank you!')
+      : B.portal === 'crazygames' ? T('Enjoying the campaign, President? Tap <b>👍</b> under the game. It helps other players find us. Thank you!')
+      : T('Enjoying the campaign, President? A quick rating on itch.io helps other players find us. Thank you!');
+    var buttons = B.portal ? '<button class="btn big" data-act="close">' + tE('Will do!') + ' 🇺🇸</button>'
+      : '<button class="btn blue" data-act="close">' + tE('Not now') + '</button><button class="btn big" data-act="rateItch">⭐ ' + tE('Rate on itch.io') + '</button>';
+    UI.advisorDialog('washington', 'George Washingtun', text, buttons, { title: '⭐ ' + tE('A favor, Mr. President'), talking: true });
+    return true;
+  }
+  ACT.rateItch = function () { AN.track('rate_click', {}); PL.openUrl(ITCH_URL); UI.closeAll(); };
+
   function checkTips() {
     if (UI.anyModal() || document.querySelector('.cine') || TU.active()) return;
     if (maybeAskReminders()) return;
+    if (maybeAskRating()) return;
     if (S.settings.tips === false) return;
     for (var i = 0; i < TIPS.length; i++) {
       var t = TIPS[i], key = 'tip_' + t.id + (t.id === 'event' ? '_' + S.worlds[D.EVENT_INDEX].eventKey : '');

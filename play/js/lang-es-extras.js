@@ -577,5 +577,11 @@ I18N.register('es', {
   "See the results": "Ver resultados",
   "Every Cabinet member, explained": "Cada miembro del Gabinete, explicado",
   "The Codex has the (mostly) true history of all 100 businesses and politicians.": "El Códice tiene la historia (casi) verdadera de los 100 negocios y políticos.",
-  "Open the Codex": "Abrir el Códice"
+  "Open the Codex": "Abrir el Códice",
+  "Enjoying the campaign, President? A quick rating on itch.io helps other players find us. Scroll down below the game and click <b>Rate this game</b>. Thank you!": "¿Disfrutando la campaña, Presidente? Una valoración rápida en itch.io ayuda a otros jugadores a encontrarnos. Baja debajo del juego y pulsa <b>Rate this game</b>. ¡Gracias!",
+  "Enjoying the campaign, President? Tap <b>👍</b> under the game. It helps other players find us. Thank you!": "¿Disfrutando la campaña, Presidente? Pulsa <b>👍</b> debajo del juego. Ayuda a otros jugadores a encontrarnos. ¡Gracias!",
+  "Enjoying the campaign, President? A quick rating on itch.io helps other players find us. Thank you!": "¿Disfrutando la campaña, Presidente? Una valoración rápida en itch.io ayuda a otros jugadores a encontrarnos. ¡Gracias!",
+  "Will do!": "¡Claro!",
+  "Rate on itch.io": "Valorar en itch.io",
+  "A favor, Mr. President": "Un favor, señor Presidente"
 });
