@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+  <title>Star-Spangled News Network</title>
+  <link>https://rogerstheboss12-coder.github.io/podcast/</link>
+  <atom:link href="https://rogerstheboss12-coder.github.io/podcast/feed.xml" rel="self" type="application/rss+xml"/>
+  <language>en-us</language>
+  <description>The most trusted name in fake news. Five minutes a week of parody headlines from the idle game Star-Spangled Tycoon, anchored by Jack F. Kennedazzle. All characters are fictional. Play free on the App Store.</description>
+  <itunes:author>Paydown Developing</itunes:author>
+  <itunes:owner><itunes:name>Paydown Developing</itunes:name><itunes:email>PaydownDeveloping@gmail.com</itunes:email></itunes:owner>
+  <itunes:image href="https://rogerstheboss12-coder.github.io/podcast/cover.jpg"/>
+  <itunes:category text="Comedy"><itunes:category text="Comedy Fiction"/></itunes:category>
+  <itunes:category text="Leisure"><itunes:category text="Video Games"/></itunes:category>
+  <itunes:explicit>false</itunes:explicit>
+  <itunes:type>episodic</itunes:type>
+  <item>
+    <title>Ep. 1: The Great Parody Election Begins (Also, the Moon Is a State Now)</title>
+    <description>Jack F. Kennedazzle kicks off the Great 2026 Parody Election: Gov. Flip-Flopson versus Mr. Moneybags McGee. Plus fireworks become a food group, a monster truck joins the school board, and Senator Snoozeworth explains the filibuster. Vote free in your browser at rogerstheboss12-coder.github.io/play. Play Star-Spangled Tycoon free: https://apps.apple.com/app/id6816208938</description>
+    <enclosure url="https://rogerstheboss12-coder.github.io/podcast/ep001.mp3" length="1568533" type="audio/mpeg"/>
+    <guid isPermaLink="false">sst-news-ep001</guid>
+    <pubDate>Sun, 27 Sep 2026 00:23:07 +0000</pubDate>
+    <itunes:duration>195</itunes:duration>
+    <itunes:episode>1</itunes:episode>
+    <itunes:explicit>false</itunes:explicit>
+  </item>
+</channel>
+</rss>
