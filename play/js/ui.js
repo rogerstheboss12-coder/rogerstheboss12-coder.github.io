@@ -726,8 +726,9 @@
         var sub = p.desc ? tE(p.desc) : tE('{n} Liberty Bucks', { n: F.num(p.lb) }) + (p.tag ? ' · <b>' + tE(p.tag) + '</b>' : '');
         return row(p.id, p.icon, tE(p.name), sub, owned ? '<span class="btn blue ghost">' + tE('Owned') + '</span>' : '<button class="btn ' + (p.noAds ? 'red' : '') + '" data-act="iap" data-id="' + p.id + '">' + esc(price) + '</button>', p.noAds ? 'featured' : '');
       }).join('');
-      body += '<div class="dialog-actions"><button class="btn blue" data-act="restore">' + tE('Restore purchases') + '</button></div>';
-      body += '<p class="panel-note small">' + tE(PL.android ? 'Purchases are processed by Google Play. Liberty Bucks are a virtual currency with no cash value.' : 'Purchases are processed by Apple. Liberty Bucks are a virtual currency with no cash value.') + (PL.storeAvailable() ? '' : ' ' + tE('(Store unavailable in this build — purchases are simulated.)')) + '</p>';
+      if (PL.web) body += '<p class="panel-note small">' + tE('Purchases are made in the iPhone and iPad app. Everything else in the Freedom Store works right here.') + '</p>';
+      else body += '<div class="dialog-actions"><button class="btn blue" data-act="restore">' + tE('Restore purchases') + '</button></div>';
+      if (!PL.web) body += '<p class="panel-note small">' + tE(PL.android ? 'Purchases are processed by Google Play. Liberty Bucks are a virtual currency with no cash value.' : 'Purchases are processed by Apple. Liberty Bucks are a virtual currency with no cash value.') + (PL.storeAvailable() ? '' : ' ' + tE('(Store unavailable in this build — purchases are simulated.)')) + '</p>';
     }
     return { title: '🦅 ' + tE('Freedom Store'), sub: tE('Spend freedom, earn more freedom'), body: body };
   };

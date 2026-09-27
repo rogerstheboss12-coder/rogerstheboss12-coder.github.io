@@ -213,9 +213,11 @@
   // Resolves 'earned' (reward earned), 'nofill' (no ad could be loaded or shown) or 'dismissed'
   // (closed before the reward). On web, simulates a short "ad".
   // Consent (UMP) and the iOS tracking prompt are deferred until the player first chooses to watch an ad.
-  function showRewardedAd() {
+  function showRewardedAd(placement) {
     var ad = plugin('AdMob');
     if (DEMO) return Promise.resolve('unavailable');
+    // Browser build: real web ads (js/web-ads.js), never free rewards.
+    if (!native && WEB && root.WebAds) return root.WebAds.rewarded(placement);
     if (!ad) return new Promise(function (res) { setTimeout(function () { res('earned'); }, 1500); });
     var p = initAds().then(function () { return adReady ? true : preloadAd(); });
     return p.then(function (ok) {
@@ -243,6 +245,7 @@
     safe(app.getLaunchUrl()).then(function (r) { if (r && r.url) fn(r.url); });
   }
   var DEMO = !!(root.BUILD && root.BUILD.demo);
+  var WEB = !native && !!(root.BUILD && root.BUILD.web);
   function adsAvailable() { return !DEMO && (!!plugin('AdMob') || !native); }
   function showAdPrivacyOptions() {
     var ad = plugin('AdMob');
@@ -312,7 +315,7 @@
   }
 
   root.Platform = {
-    native: native, android: android, demo: DEMO, ADS: ADS,
+    native: native, android: android, demo: DEMO, web: WEB, ADS: ADS,
     storeName: android ? 'Google Play' : 'App Store',
     loadSave: loadSave, writeSave: writeSave, clearSave: clearSave, readLocal: readLocal,
     syncTime: syncTime, now: now, isVerified: function () { return verified; },

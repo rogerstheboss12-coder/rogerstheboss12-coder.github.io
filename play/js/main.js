@@ -154,6 +154,7 @@
     UI.renderWorld();
     FX.toast('🗳️', T('Landslide victory!'), '+' + F.num(gain) + ' ' + tE(W().prestigeName));
     AN.track('election', { w: wi, gain: gain, n: WS().elections });
+    webBreak('election');
     LVU.award('election');
     save(true);
   };
@@ -195,7 +196,7 @@
     save(true);
   };
 
-  ACT.travel = function (d) { if (PL.demo && +d.w > 0 && E.isMain(+d.w)) { root.DemoUI.prompt('world'); return; } travel(+d.w); UI.closeAll(); };
+  ACT.travel = function (d) { if (PL.demo && +d.w > 0 && E.isMain(+d.w)) { root.DemoUI.prompt('world'); return; } travel(+d.w); UI.closeAll(); webBreak('travel'); };
   ACT.launch = function (d) {
     var from = +d.w;
     if (PL.demo) { root.DemoUI.prompt('world'); return; }
@@ -441,7 +442,7 @@
   ACT.iap = function (d) {
     var p = D.IAP.filter(function (x) { return x.id === d.id; })[0];
     if (!p) return;
-    if (PL.demo) { root.DemoUI.prompt('store'); return; }
+    if (PL.demo || PL.web) { root.DemoUI.prompt('store'); return; }
     AN.track('purchase_start', { id: p.id });
     if (!PL.storeAvailable()) {
       if (DEV) { onTransaction({ productId: p.id, transactionId: 'dev-' + Date.now() }); return; }
@@ -516,17 +517,23 @@
     if (!on && el) el.remove();
   }
 
+  // Browser build: an occasional full-screen ad at a natural pause (js/web-ads.js rate-limits it).
+  function webBreak(name) {
+    if (root.WebAds && root.WebAds.on) setTimeout(function () { if (!UI.anyModal()) root.WebAds.interstitial(name); }, 2500);
+  }
+
   // Founding Pack owners get ad rewards immediately; others watch a rewarded ad.
   function withRewardedAd(placement, grant) {
     if (PL.demo) { root.DemoUI.prompt('ads'); return; }
     if (S.iap.founding) { grant(); return; }
     AN.track('ad_start', { p: placement });
     A.duck(true);
-    var web = !PL.native;
+    // The browser build shows real web ads (or a house ad) itself; only the dev web server simulates one.
+    var web = !PL.native && !PL.web;
     var overlay = web ? UI.modal('<div class="modal-body center"><div class="ad-sim">📺</div><p>' + tE('Your sponsor\'s message…') + '</p><p class="panel-note small">' + tE('(Simulated ad in the web build)') + '</p></div>', 'small') : null;
     if (overlay) overlay._sticky = true;
-    busy(!web);
-    PL.showRewardedAd().then(function (res) {
+    busy(!web && !PL.web);
+    PL.showRewardedAd(placement).then(function (res) {
       busy(false); A.duck(false);
       if (overlay) { overlay._sticky = false; overlay.remove(); UI.closeTop(); }
       if (res === 'earned') { AN.track('ad_reward', { p: placement }); grant(); }
@@ -778,7 +785,7 @@
       var w = UI.advisorDialog(m.face, m.name, T('Welcome back, President! You were away for <b>{d}</b>{cap}. Your Cabinet kept the economy humming:', { d: F.duration(cr.away), cap: esc(capNote) }),
         (any ? '<button class="btn blue big" data-act="offlineDouble">' + (S.iap.founding ? '×2 ' + tE('Double it!') : '▶ ' + tE('Watch ad: ×2')) + '</button>' : '') + '<button class="btn big" data-act="close">' + tE('Collect') + ' 💰</button>',
         { title: '🌙 ' + tE('While you were away…'), extra: extra, talking: true,
-          onClose: function () { lastOffline = null; A.play('cash', 0.9); FX.coins(innerWidth / 2, innerHeight / 2, 20); if (any) FX.bump(document.getElementById('cash-box')); maybeDaily(); } });
+          onClose: function () { lastOffline = null; webBreak('welcome_back'); A.play('cash', 0.9); FX.coins(innerWidth / 2, innerHeight / 2, 20); if (any) FX.bump(document.getElementById('cash-box')); maybeDaily(); } });
       w.classList.add('offline-modal');
     }, 400);
   }
@@ -981,6 +988,7 @@
   // ---------------- Boot ----------------
   function boot() {
     PL.initChrome();
+    if (root.WebAds) root.WebAds.setAudio(function () { A.pause(true); }, function () { A.pause(false); });
     setTimeout(PL.hideSplash, 8000); // safety net
     PL.loadSave().then(function (raw) {
       var loaded = null;

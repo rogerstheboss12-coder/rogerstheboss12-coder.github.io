@@ -1,1 +1,1 @@
-window.BUILD = {"dev":false,"demo":true,"version":"1.1.0","built":"2026-09-26T23:36:41.949Z"};
+window.BUILD = {"dev":false,"demo":false,"web":true,"version":"1.1.0","built":"2026-09-27T02:14:21.221Z","appLive":false,"appUrl":"https://apps.apple.com/app/id6816208938","siteUrl":"https://rogerstheboss12-coder.github.io/","ads":{"client":"ca-pub-1678194149212885","testMode":false,"slots":{"rail":"","banner":"","inline":""},"firstInterstitialAfterMin":5,"minMinutesBetweenInterstitials":3}};

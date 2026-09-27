@@ -17,7 +17,10 @@
         line: 'I\'ll buy this election. Literally.' }
     ],
     reward: { winner: 30, loser: 12 },           // Liberty Bucks once the result is in
-    invite: { friend: 25, max: 10, newPlayer: 40, redeemDays: 14 }
+    invite: { friend: 25, max: 10, newPlayer: 40, redeemDays: 14 },
+    promoMax: 50,                                // cap on Liberty Bucks per reel code, whatever the server says
+    // Community goal: everyone who plays Election Night shares the reward if players together clear enough event tiers.
+    goal: { id: 'election2026', board: 'ev:E100:election', reward: { lb: 30, warp: 12 * 3600 }, showUntil: Date.UTC(2026, 10, 12) }
   };
 
   function state(s) {
@@ -27,6 +30,8 @@
     if (c.result === undefined) c.result = null;          // { winner, counts, closed }
     if (c.paid === undefined) c.paid = false;
     if (!c.invite) c.invite = { code: '', friends: 0, paid: 0, redeemed: '' };
+    if (!c.promos) c.promos = {};                          // reel code → Liberty Bucks received
+    if (!c.goal) c.goal = { progress: 0, target: 0, done: false, over: false, claimed: false };
     return c;
   }
   function candidate(id) { return CFG.candidates.filter(function (c) { return c.id === id; })[0] || null; }
@@ -79,6 +84,32 @@
     return CFG.invite.newPlayer;
   }
 
+  // ---------- Reel codes ----------
+  function isPromo(code) { return /^R\d{2}[A-Z0-9]{4}$/.test(code); }
+  function promoRedeemed(s, code, lb) {
+    var c = state(s);
+    if (c.promos[code] != null) return 0;
+    lb = Math.max(0, Math.min(CFG.promoMax, lb | 0));
+    c.promos[code] = lb; s.lb += lb;
+    return lb;
+  }
+
+  // ---------- Community goal ----------
+  function goalPlayed(s) { var b = s.extras.league.boards[CFG.goal.board]; return !!(b && b.score > 0); }
+  function setGoal(s, r) {
+    if (!r || r.target == null) return false;
+    var g = state(s).goal, was = g.done;
+    g.progress = +r.progress || 0; g.target = +r.target || 0; g.done = !!r.done; g.over = !!r.over; g.starts = +r.starts || 0; g.ends = +r.ends || 0;
+    return !was && g.done;
+  }
+  function goalClaimable(s) { var g = state(s).goal; return g.done && g.over && !g.claimed && goalPlayed(s); }
+  function claimGoal(s, t) {
+    if (!goalClaimable(s)) return null;
+    state(s).goal.claimed = true;
+    return root.Live.applyReward(s, CFG.goal.reward, t);
+  }
+  function goalVisible(s, t) { var g = state(s).goal; return t < CFG.goal.showUntil && !!g.target && (t >= (g.starts || 0) - 7 * 86400000); }
+
   // ---------- Network ----------
   function LG() { return root.Leagues; }
   function request(path, body) {
@@ -108,8 +139,20 @@
       return { due: setFriends(s, r.friends) };
     }, function () { return null; });
   }
+  function syncGoal(s) {
+    return request('/v1/goal?goal=' + CFG.goal.id).then(function (r) { return { done: setGoal(s, r) }; }, function () { return null; });
+  }
   function redeem(s, code) {
     code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (isPromo(code)) {
+      if (state(s).promos[code] != null) return Promise.resolve({ ok: false, error: 'already redeemed' });
+      return request('/v1/promo/redeem', { player: playerId(s), code: code }).then(function (r) {
+        if (r._status === 200) return { ok: true, lb: promoRedeemed(s, code, r.lb), promo: true };
+        if (r.error === 'already redeemed') state(s).promos[code] = 0;
+        return { ok: false, error: r.error || 'error' };
+      }, function () { return { ok: false, error: 'offline' }; });
+    }
+    if (!canRedeem(s, Date.now())) return Promise.resolve({ ok: false, error: state(s).invite.redeemed ? 'already redeemed' : 'too late' });
     return request('/v1/invite/redeem', { player: playerId(s), code: code }).then(function (r) {
       if (r._status === 200) return { ok: true, lb: redeemed(s, code) };
       return { ok: false, error: r.error || 'error' };
@@ -119,8 +162,9 @@
   root.Campaign = {
     CFG: CFG, state: state, candidate: candidate, pollOpen: pollOpen, raceVisible: raceVisible, vote: vote,
     setTally: setTally, resultClaimable: resultClaimable, claimResult: claimResult, shares: shares,
-    canRedeem: canRedeem, setFriends: setFriends, redeemed: redeemed,
-    syncPoll: syncPoll, syncInvite: syncInvite, redeem: redeem
+    canRedeem: canRedeem, setFriends: setFriends, redeemed: redeemed, isPromo: isPromo, promoRedeemed: promoRedeemed,
+    setGoal: setGoal, goalClaimable: goalClaimable, claimGoal: claimGoal, goalVisible: goalVisible,
+    syncPoll: syncPoll, syncInvite: syncInvite, syncGoal: syncGoal, redeem: redeem
   };
 
   // ---------------------------------------------------------------- UI (browser only)
@@ -158,6 +202,14 @@
       if (sh.total) body += '<p class="panel-note small center">' + tE('{n} votes so far.', { n: root.Fmt.num(sh.total) }) + '</p>';
       if (open && c.vote && c.sent !== c.vote) body += '<p class="panel-note small center">' + tE('Your vote is saved and will be counted when you\'re online.') + '</p>';
     }
+    var g = c.goal;
+    if (!demo() && goalVisible(s, t)) {
+      var gp = g.target ? Math.min(100, g.progress / g.target * 100) : 0;
+      body += '<h3>🌎 ' + tE('Community goal: Election Night') + '</h3><p class="panel-note">' + tE('During Election Night (Nov 1–3), every reward tier any player clears counts. Reach {n} tiers together and everyone who played gets ★{lb} and a 12-hour Time Warp.', { n: root.Fmt.num(g.target), lb: CFG.goal.reward.lb }) + '</p>' +
+        '<div class="bar goal-bar"><i style="width:' + gp.toFixed(1) + '%"></i></div><p class="panel-note small center">' + tE('{a} / {b} tiers', { a: root.Fmt.num(g.progress), b: root.Fmt.num(g.target) }) + (g.done ? ' · ✅ ' + tE('Goal reached!') : '') + '</p>';
+      if (goalClaimable(s)) body += '<div class="center-cta"><button class="btn gold big" data-act="campaignGoal">' + tE('Claim ★{n} + Time Warp', { n: CFG.goal.reward.lb }) + '</button></div>';
+      else if (g.done && g.over && !g.claimed && !goalPlayed(s)) body += '<p class="panel-note small center">' + tE('The reward goes to players who took part in Election Night.') + '</p>';
+    }
     if (demo()) return { title: '🗳️ ' + tE('Campaign HQ'), sub: tE('Vote for President'), body: body + root.DemoUI.cta() };
     // Invites
     var inv = c.invite;
@@ -166,6 +218,7 @@
       (inv.code ? '<button class="btn blue sm" data-act="campaignShare">📤 ' + tE('Share') + '</button>' : '') + '</div>';
     if (inv.redeemed) body += '<div class="setting"><span>' + tE('Friend code used') + '<small class="setting-sub">' + esc(inv.redeemed) + '</small></span></div>';
     else if (canRedeem(s, t)) body += '<div class="setting"><span>' + tE('Got a friend\'s code?') + '<small class="setting-sub">' + tE('Enter it for ★{n}.', { n: CFG.invite.newPlayer }) + '</small></span><button class="btn blue sm" data-act="campaignEnter">' + tE('Enter code') + '</button></div>';
+    body += '<div class="setting"><span>🎬 ' + tE('Code from our videos?') + '<small class="setting-sub">' + tE('Some of our videos end with a secret code worth up to ★{n}.', { n: CFG.promoMax }) + '</small></span><button class="btn blue sm" data-act="campaignEnter">' + tE('Enter code') + '</button></div>';
     body += '</div>';
     return { title: '🗳️ ' + tE('Campaign HQ'), sub: tE('Vote for President · invite friends'), body: body };
   };
@@ -192,6 +245,13 @@
       FX.toast('🗳️', r.won ? T('Your candidate won!') : T('Better luck in 2028'), '★' + r.lb);
       UI.refreshPanel(true); root.Game.save(true);
     },
+    campaignGoal: function () {
+      var r = claimGoal(S(), E.now());
+      if (!r) return;
+      A.play('fanfare', 0.9); PL.haptic('success'); FX.confetti(innerWidth / 2, innerHeight / 2, 160);
+      FX.toast('🌎', T('Community goal reached!'), '★' + r.lb + (r.gain ? ' · +' + UI.money(r.gain, r.world) : ''));
+      UI.refreshPanel(true); root.Game.save(true);
+    },
     campaignShare: function () {
       var code = state(S()).invite.code;
       if (!code) return;
@@ -199,7 +259,7 @@
       if (root.Analytics) root.Analytics.track('invite_share', {});
     },
     campaignEnter: function (d) {
-      UI.modal(UI.head('🤝 ' + tE('Enter a friend\'s code'), '') + '<div class="modal-body"><input id="inviteCodeInput" class="code-input" maxlength="6" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="ABC123" value="' + esc(d.code || '') + '">' +
+      UI.modal(UI.head('🤝 ' + tE('Enter a friend\'s code'), '') + '<div class="modal-body"><input id="inviteCodeInput" class="code-input" maxlength="7" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="ABC123 / R42ABCD" value="' + esc(d.code || '') + '">' +
         '<div class="dialog-actions"><button class="btn blue" data-act="close">' + tE('Cancel') + '</button><button class="btn big" data-act="campaignRedeem">' + tE('Redeem') + '</button></div></div>', 'small');
     },
     campaignRedeem: function () {
@@ -207,30 +267,31 @@
       redeem(s, el ? el.value : '').then(function (r) {
         if (r.ok) {
           UI.closeTop(); A.play('fanfare', 0.9); PL.haptic('success'); FX.confetti(innerWidth / 2, innerHeight / 2, 100);
-          FX.toast('🤝', T('Welcome aboard!'), '★' + r.lb); root.Game.save(true); refresh();
-          if (root.Analytics) root.Analytics.track('invite_redeem', {});
+          FX.toast(r.promo ? '🎬' : '🤝', r.promo ? T('Code accepted!') : T('Welcome aboard!'), '★' + r.lb); root.Game.save(true); refresh();
+          if (root.Analytics) root.Analytics.track(r.promo ? 'promo_redeem' : 'invite_redeem', r.promo ? { code: String(el && el.value).toUpperCase().slice(0, 3) } : {});
           return;
         }
         var msg = { 'unknown code': 'That code doesn\'t exist.', 'own code': 'You can\'t use your own code.', 'already redeemed': 'You\'ve already used a friend\'s code.',
-          'code full': 'That code has already been used by {m} friends.', 'bad code': 'Codes are 6 letters and numbers.', offline: 'You need to be online to redeem a code.' }[r.error] || 'Something went wrong. Try again later.';
-        FX.toast('⚠️', T('Code not accepted'), T(msg, { m: CFG.invite.max }));
+          'code full': 'That code has already been used by {m} friends.', 'bad code': 'That doesn\'t look like a code.', expired: 'That code has expired.', 'too late': 'Friend codes work in your first {d} days of playing.', unavailable: 'Codes are unavailable right now. Try again later.', offline: 'You need to be online to redeem a code.' }[r.error] || 'Something went wrong. Try again later.';
+        FX.toast('⚠️', T('Code not accepted'), T(msg, { m: CFG.invite.max, d: CFG.invite.redeemDays }));
       });
     }
   };
   Object.keys(ACTIONS).forEach(function (k) { root.ExtrasUI.ACTIONS[k] = ACTIONS[k]; });
 
   // Hub chip, menu entry and badge
-  function claimable(s) { return resultClaimable(s); }
+  function claimable(s) { return resultClaimable(s) || goalClaimable(s); }
   function chip(t) {
     var s = S(), c = state(s);
     if (!s.tutorial.done) return '';
+    if (goalClaimable(s)) return '<button class="hub-chip dot gift" data-act="openPanel" data-panel="campaign"><span>🌎</span>' + tE('Community reward!') + '</button>';
     if (claimable(s)) return '<button class="hub-chip dot" data-act="openPanel" data-panel="campaign"><span>🗳️</span>' + tE('Election results!') + '</button>';
     if (pollOpen(t) && !c.vote && s.stats.playtime >= 600) return '<button class="hub-chip dot gift" data-act="openPanel" data-panel="campaign"><span>🗳️</span>' + tE('Vote for President!') + '</button>';
     return '';
   }
 
   // Background sync: poll every 10 minutes (every minute around the close), invites every 5 minutes.
-  var lastPoll = 0, lastInvite = 0;
+  var lastPoll = 0, lastInvite = 0, lastGoal = 0;
   function tick() {
     var s = S(), t = E.now(), now = Date.now();
     if (!s || !LG() || !LG().serverUrl()) return;
@@ -239,6 +300,14 @@
       lastPoll = now;
       syncPoll(s, t).then(function (r) {
         if (r && r.final && resultClaimable(s)) FX.toast('🗳️', T('The votes are in!'), T('{name} wins the Presidency. Open Campaign HQ to claim your reward.', { name: T(candidate(state(s).result.winner).name) }));
+        refresh();
+      });
+    }
+    var g = c.goal, live = g.starts && t >= g.starts && t < g.ends + 3600000;
+    if (!demo() && t < CFG.goal.showUntil && !g.claimed && !(g.done && g.over) && now - lastGoal > (live ? 120000 : 900000)) {
+      lastGoal = now;
+      syncGoal(s).then(function (r) {
+        if (r && r.done) FX.toast('🌎', T('Community goal reached!'), T('Everyone who played Election Night gets ★{n} and a Time Warp when it ends.', { n: CFG.goal.reward.lb }));
         refresh();
       });
     }
