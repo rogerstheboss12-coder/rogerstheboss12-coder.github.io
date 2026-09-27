@@ -3,10 +3,13 @@
  *  - A 300×600 display rail beside the game on wide screens.
  *  - House ads (our own promos) whenever Google has nothing to show — including before AdSense approves the site —
  *    so rewarded perks keep working and every slot is filled.
- * Settings come from site.config.json via window.BUILD.ads. */
+ * Portal builds (`--portal=`) swap the provider: 'crazygames' uses the CrazyGames SDK (no outbound links allowed),
+ * 'none' (itch.io) shows only house ads. Settings come from site.config.json via window.BUILD.ads. */
 (function (root) {
   'use strict';
   var B = root.BUILD || {}, ON = !!B.web, C = B.ads || {}, SLOTS = C.slots || {};
+  var PROVIDER = C.provider || 'adsense', NO_LINKS = PROVIDER === 'crazygames';
+  var cg = null; // CrazyGames SDK once initialised
   var SITE = B.siteUrl || '/';
   var ready = false, started = Date.now(), lastBreak = 0;
   var audio = { mute: function () {}, unmute: function () {} };
@@ -40,7 +43,7 @@
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function promoHtml(p) {
     return '<img src="' + p.icon + '" alt="" width="96" height="96"><b>' + esc(t(p.title)) + '</b><p>' + esc(t(p.body)) + '</p>' +
-      '<a class="wa-cta" href="' + p.href + '" target="_blank" rel="noopener">' + esc(t(p.cta)) + '</a>';
+      (NO_LINKS ? '' : '<a class="wa-cta" href="' + p.href + '" target="_blank" rel="noopener">' + esc(t(p.cta)) + '</a>');
   }
   // A 5-second sponsor card. Resolves 'earned' once the countdown finishes and the player claims.
   function houseRewarded() {
@@ -62,11 +65,41 @@
     });
   }
 
+  // ---------------- CrazyGames ----------------
+  function loadCrazyGames() {
+    var s = document.createElement('script');
+    s.src = 'https://sdk.crazygames.com/crazygames-sdk-v3.js';
+    s.onload = function () {
+      var sdk = root.CrazyGames && root.CrazyGames.SDK;
+      if (!sdk) return;
+      Promise.resolve(sdk.init()).then(function () {
+        cg = sdk;
+        try { sdk.game.loadingStop(); sdk.game.gameplayStart(); } catch (e) {}
+      }).catch(function () {});
+    };
+    document.head.appendChild(s);
+  }
+  function cgAd(kind) {
+    return new Promise(function (res) {
+      if (!cg) return res('nofill');
+      var done = false;
+      function end(r) { if (!done) { done = true; audio.unmute(); try { cg.game.gameplayStart(); } catch (e) {} res(r); } }
+      try { cg.game.gameplayStop(); } catch (e) {}
+      cg.ad.requestAd(kind, {
+        adStarted: function () { audio.mute(); },
+        adFinished: function () { lastBreak = Date.now(); end('earned'); },
+        adError: function () { end('nofill'); }
+      });
+    });
+  }
+
   // ---------------- Breaks ----------------
   // Resolves 'earned', 'dismissed' or 'nofill' like Platform.showRewardedAd.
   function rewarded(name) {
     if (!ON) return Promise.resolve('nofill');
-    if (!ready) return houseRewarded();
+    // CrazyGames: their ad or the game's own capped "this one's on us" grant (Platform.showRewardedAd → 'nofill').
+    if (PROVIDER === 'crazygames') return cgAd('rewarded');
+    if (PROVIDER === 'none' || !ready) return houseRewarded();
     return new Promise(function (res) {
       var done = false, shown = false;
       function end(r) { if (done) return; done = true; clearTimeout(guard); lastBreak = Date.now(); res(r); }
@@ -90,11 +123,12 @@
   }
   // Full-screen ad at a natural pause. Silently skipped when too soon or when Google has nothing.
   function interstitial(name) {
-    if (!ON || !ready) return;
+    if (!ON || (PROVIDER === 'adsense' && !ready) || (PROVIDER === 'crazygames' && !cg) || PROVIDER === 'none') return;
     var now = Date.now();
     if (now - started < min(C.firstInterstitialAfterMin, 5) || now - lastBreak < min(C.minMinutesBetweenInterstitials, 3)) return;
     if (document.hidden) return;
     lastBreak = now;
+    if (PROVIDER === 'crazygames') { cgAd('midgame'); return; }
     root.adBreak({ type: 'next', name: String(name || 'next'), beforeAd: function () { audio.mute(); }, afterAd: function () { audio.unmute(); } });
   }
 
@@ -115,11 +149,11 @@
   }
 
   root.WebAds = {
-    on: ON, rewarded: rewarded, interstitial: interstitial,
+    on: ON, provider: PROVIDER, noLinks: NO_LINKS, rewarded: rewarded, interstitial: interstitial,
     setAudio: function (mute, unmute) { audio.mute = mute; audio.unmute = unmute; }
   };
-  if (ON) {
+  if (ON && PROVIDER === 'adsense') {
     loadGoogle();
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountRail); else mountRail();
-  }
+  } else if (ON && PROVIDER === 'crazygames') loadCrazyGames();
 })(typeof window !== 'undefined' ? window : globalThis);

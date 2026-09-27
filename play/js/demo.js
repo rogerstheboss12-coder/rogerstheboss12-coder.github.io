@@ -6,7 +6,7 @@
   var DEMO = !!B.demo, WEB = !!B.web;
   var APP_URL = B.appUrl || 'https://apps.apple.com/app/id6816208938';
   // Until Apple approves the app there is no store page to link to (site.config.json → appStoreLive).
-  var LIVE = B.appLive !== false;
+  var LIVE = B.appLive !== false && B.portal !== 'crazygames';
   var UI = root.UI, T = root.T;
   function tE(s, v) { return UI.tE(s, v); }
   function track(why) { if (root.Analytics) root.Analytics.track('demo_cta', { why: why }); }
