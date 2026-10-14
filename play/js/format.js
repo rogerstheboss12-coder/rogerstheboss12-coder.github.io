@@ -69,8 +69,12 @@
   }
 
   function short(n) { // compact, for badges
-    if (n < 1e3) return String(Math.floor(n));
+    if (n < 1e3) {
+      if (n >= 1 && n !== Math.floor(n) && n.toFixed(2) !== '1000.00') return n.toFixed(2).replace(/\.?0+$/, '');
+      return String(Math.floor(n));
+    }
     var k = Math.floor(Math.log10(n) / 3);
+    if (n / Math.pow(10, k * 3) >= 999.95) k++; // would round up to "1000": use the next suffix
     if (mode === 'sci') return n.toExponential(1).replace('e+', 'e');
     var suf = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
     if (mode === 'letters' && k >= suf.length && letters(k)) return (n / Math.pow(10, k * 3)).toFixed(1).replace(/\.0$/, '') + letters(k);

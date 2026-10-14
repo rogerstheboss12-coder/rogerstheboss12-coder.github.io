@@ -76,6 +76,7 @@
     var meta = L.SEASON_NAMES[((idx % L.SEASON_NAMES.length) + L.SEASON_NAMES.length) % L.SEASON_NAMES.length];
     return { index: idx, key: 'S' + idx, start: dateFromEpochDays(idx * L.SEASON.days), end: dateFromEpochDays((idx + 1) * L.SEASON.days), name: meta.name, exclusive: meta.exclusive };
   }
+  function keyIndex(key) { return parseInt(String(key).slice(1), 10); }
   function weekInfo(t) {
     t = t || now();
     var idx = Math.floor(daysSinceEpoch(t) / 7); // epoch is a Monday
@@ -85,7 +86,7 @@
 
   // ---------- Rewards ----------
   function mainWorld(state) { return isMain(state.world) ? state.world : 0; }
-  function applyReward(state, r, t) {
+  function applyReward(state, r, t, seasonT) {
     t = t || now();
     var out = { lb: 0, cards: [], gain: 0 };
     if (r.lb) { state.lb += r.lb; out.lb += r.lb; }
@@ -94,7 +95,7 @@
     if (r.warp) { var w = mainWorld(state); out.gain = E().simulateAway(state, r.warp, w)[w]; out.world = w; }
     if (r.card) out.cards = grantCards(state, r.card);
     if (r.cosmetic) {
-      var id = r.cosmetic === 'season' ? seasonInfo(t).exclusive : r.cosmetic;
+      var id = r.cosmetic === 'season' ? seasonInfo(seasonT || t).exclusive : r.cosmetic;
       if (state.live.cosmetics.owned[id]) { state.lb += 50; out.lb += 50; } else { state.live.cosmetics.owned[id] = true; out.cosmetic = id; equip(state, id); }
     }
     bump(state);
@@ -128,11 +129,12 @@
     for (var k = 0; k < reached; k++) { if (!p.free[k]) n++; if (p.premium && !p.prem[k]) n++; }
     return n + Math.max(0, passBonusReady(state));
   }
-  function claimPass(state, t) {
+  // seasonT: the season whose rewards are being claimed (differs from t when auto-claiming at rollover).
+  function claimPass(state, t, seasonT) {
     var p = state.live.pass, reached = passTier(state), out = { lb: 0, cards: [], gain: 0, n: 0 };
     for (var k = 0; k < reached; k++) {
-      if (!p.free[k]) { p.free[k] = true; mergeOut(out, applyReward(state, L.passTrack(k, false), t)); out.n++; }
-      if (p.premium && !p.prem[k]) { p.prem[k] = true; mergeOut(out, applyReward(state, L.passTrack(k, true), t)); out.n++; }
+      if (!p.free[k]) { p.free[k] = true; mergeOut(out, applyReward(state, L.passTrack(k, false), t, seasonT)); out.n++; }
+      if (p.premium && !p.prem[k]) { p.prem[k] = true; mergeOut(out, applyReward(state, L.passTrack(k, true), t, seasonT)); out.n++; }
     }
     var bonus = passBonusReady(state);
     if (bonus > 0) { p.bonus += bonus; state.lb += bonus * L.SEASON.bonusLb; out.lb += bonus * L.SEASON.bonusLb; out.n += bonus; }
@@ -145,7 +147,7 @@
   function activeOffer(state, t) {
     var a = state.live.offers.active;
     if (!a) return null;
-    if ((t || now()) >= a.until || state.live.offers.bought[a.id]) { state.live.offers.active = null; return null; }
+    if ((t || now()) >= a.until || (state.live.offers.bought[a.id] && !(offerDef(a.id) || {}).repeatDays)) { state.live.offers.active = null; return null; }
     return { def: offerDef(a.id), until: a.until };
   }
   function triggerOffer(state, id, t) {
@@ -465,16 +467,23 @@
     t = t || now();
     var lv = ensure(state), ev = [];
     var si = seasonInfo(t);
-    if (lv.pass.season !== si.key) {
-      var old = lv.pass.season;
+    // Seasons and weeks only move forward: a wrong or flapping clock must not wipe a purchased pass or settle the race.
+    var old = lv.pass.season, wk = weekInfo(t);
+    var weekRolls = unlocked(state, 'race') && lv.race.week && wk.index > keyIndex(lv.race.week);
+    // An unclaimed race result is paid before the season resets (so its XP counts toward the season it was earned in) and before the new week settles.
+    var paid = (weekRolls || (old && si.index > keyIndex(old))) && lv.race.pending ? claimRace(state, t) : null;
+    if (!old || si.index > keyIndex(old)) {
+      // Unclaimed pass rewards (including paid Premium tiers) are granted automatically at rollover.
+      var claimed = old ? claimPass(state, t, dateFromEpochDays(keyIndex(old) * L.SEASON.days)) : null;
       lv.pass = { season: si.key, xp: 0, premium: false, free: {}, prem: {}, bonus: 0 };
-      if (old) ev.push({ type: 'season', info: si });
+      if (old) ev.push({ type: 'season', info: si, claimed: claimed && claimed.n ? claimed : null });
     }
     if (unlocked(state, 'race')) {
-      var wk = weekInfo(t);
       if (!lv.race.week) startRace(state, t, true);
       // The rival's pace counts from when the player shows up, so a late start isn't a loss.
-      else if (lv.race.week !== wk.key) { ev.push({ type: 'raceResult', result: settleRace(state, t) }); startRace(state, t, true); }
+      else if (weekRolls) {
+        ev.push({ type: 'raceResult', result: settleRace(state, t), claimed: !!paid }); startRace(state, t, true);
+      } else if (paid) ev.push({ type: 'raceResult', result: null, claimed: true });
     }
     if (unlocked(state, 'orders')) ordersToday(state, t);
     activeOffer(state, t);
@@ -502,7 +511,7 @@
 
   root.Live = {
     ensure: ensure, defaults: defaults, unlocked: unlocked, hash: hash, rng: rng,
-    seasonInfo: seasonInfo, weekInfo: weekInfo, applyReward: applyReward, award: award,
+    seasonInfo: seasonInfo, weekInfo: weekInfo, keyIndex: keyIndex, applyReward: applyReward, award: award,
     passTier: passTier, passClaimable: passClaimable, passBonusReady: passBonusReady, claimPass: claimPass, activatePremium: activatePremium,
     offerDef: offerDef, activeOffer: activeOffer, triggerOffer: triggerOffer, offerValue: offerValue, onReturn: onReturn,
     adsExtra: adsExtra, adLeft: adLeft, noFillGrant: noFillGrant, NOFILL_PER_DAY: NOFILL_PER_DAY,

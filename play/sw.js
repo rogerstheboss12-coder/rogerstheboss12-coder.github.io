@@ -1,4 +1,4 @@
-const C = 'sst-1.1.1-1791937876779';
+const C = 'sst-1.1.1-1791939713139';
 self.addEventListener('install', (e) => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== C).map((k) => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', (e) => {

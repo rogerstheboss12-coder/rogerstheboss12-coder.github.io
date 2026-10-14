@@ -47,8 +47,11 @@
   var cgReady = !CG ? Promise.resolve(false) : new Promise(function (res) {
     var sdk = root.CrazyGames && root.CrazyGames.SDK;
     if (!sdk) return res(false);
-    var t = setTimeout(function () { res(false); }, 8000);
-    Promise.resolve(sdk.init()).then(function () { clearTimeout(t); cgData = sdk.data; try { sdk.game.loadingStart(); } catch (e) {} res(true); }, function () { clearTimeout(t); res(false); });
+    // If the SDK is slower than the timeout the game has already started from local storage; switching to the
+    // Data Module mid-session would overwrite the player's cloud save with the fresh game.
+    var timedOut = false;
+    var t = setTimeout(function () { timedOut = true; res(false); }, 8000);
+    Promise.resolve(sdk.init()).then(function () { clearTimeout(t); if (timedOut) return; cgData = sdk.data; try { sdk.game.loadingStart(); } catch (e) {} res(true); }, function () { clearTimeout(t); res(false); });
   });
   function readLocal() {
     if (cgData) { try { return cgData.getItem(KEY); } catch (e) { return null; } }
@@ -72,22 +75,27 @@
     });
   }
   function loadSaveNow() {
-    var cands = [readLocal()];
+    var cands = [{ raw: readLocal(), cloud: false }];
+    lastRaw = cands[0].raw;
     var prefs = plugin('Preferences'), cloud = plugin('CloudSave');
     return Promise.all([
       prefs ? safe(prefs.get({ key: KEY })) : null,
       cloud ? safe(cloud.get({ key: KEY })) : null
     ]).then(function (r) {
-      if (r[0] && r[0].value) cands.push(r[0].value);
-      if (r[1] && r[1].value) cands.push(r[1].value);
+      if (r[0] && r[0].value) cands.push({ raw: r[0].value, cloud: false });
+      if (r[1] && r[1].value) cands.push({ raw: r[1].value, cloud: true });
+      // A fresh install often launches before iCloud has delivered the key: hold cloud writes for a while so a new game can't overwrite it.
+      if (cloud && !(r[1] && r[1].value)) cloudHoldUntil = Date.now() + CLOUD_HOLD;
+      noteCloud(r[1] && r[1].value);
       // Only saves that actually load are candidates; a damaged one is set aside (never overwritten) for support.
       var best = null, bestScore = -1;
       loadIssue = null;
-      cands.forEach(function (raw, i) {
+      cands.forEach(function (c, i) {
+        var raw = c.raw;
         if (!raw) return;
         try {
           var s = root.Engine.deserialize(raw);
-          var sc = root.Engine.progressScore(s) + (i === 2 ? 0.5 : 0);
+          var sc = root.Engine.progressScore(s) + (c.cloud ? 0.5 : 0);
           if (sc > bestScore) { bestScore = sc; best = raw; }
         } catch (e) {
           console.warn('[platform] unreadable save', i, e && e.message);
@@ -106,18 +114,49 @@
     if (prefs) safe(prefs.set({ key: DKEY, value: raw }));
   }
 
-  var lastCloud = 0, saveError = 0;
-  function writeSave(raw, force) {
+  var lastCloud = 0, saveError = 0, cloudHoldUntil = 0, cloudScore = -1, CLOUD_HOLD = 20000, cloudHandler = null;
+  function scoreOf(raw) { try { return root.Engine.progressScore(root.Engine.deserialize(raw)); } catch (e) { return -1; } }
+  // Remembers the best progress seen in iCloud so a weaker local state never overwrites it.
+  function noteCloud(raw) { if (raw) cloudScore = Math.max(cloudScore, scoreOf(raw)); }
+  // Calls fn(raw) when another device's iCloud save arrives with more progress than the one in `cur()`.
+  function onCloudChange(cur, fn) {
+    var cloud = plugin('CloudSave');
+    if (!cloud) return;
+    cloudHandler = fn;
+    safe(cloud.addListener('changed', function () {
+      safe(cloud.get({ key: KEY })).then(function (r) {
+        var raw = r && r.value;
+        if (!raw) return;
+        var sc = scoreOf(raw), mine = cur();
+        noteCloud(raw);
+        if (sc > mine && cloudHandler) cloudHandler(raw);
+      });
+    }));
+  }
+  // Web build: remember what this tab last loaded or wrote. If the stored save has changed since, another tab
+  // has been playing, so this (stale) tab must not overwrite it.
+  var lastRaw = null;
+  function writeSave(raw, force, override) {
+    if (!native && !cgData && !override) {
+      var cur = null; try { cur = localStorage.getItem(KEY); } catch (e) {}
+      if (cur !== lastRaw) return 'other-tab';
+    }
     saveError = writeLocal(raw) ? 0 : Date.now();
     var prefs = plugin('Preferences'), cloud = plugin('CloudSave');
     if (prefs) safe(prefs.set({ key: KEY, value: raw }));
     // iCloud key-value store is rate-limited; sync at most every 30s unless forced.
     var t = Date.now();
-    if (cloud && (force || t - lastCloud > 30000)) { lastCloud = t; safe(cloud.set({ key: KEY, value: raw })); }
+    // force (import, restore, cloud choice) bypasses the launch hold: the player explicitly chose this save.
+    if (cloud && (force || (t >= cloudHoldUntil && t - lastCloud > 30000))) {
+      lastCloud = t;
+      if (scoreOf(raw) >= cloudScore) { safe(cloud.set({ key: KEY, value: raw })); noteCloud(raw); }
+    }
+    if (!saveError) lastRaw = raw;
     // Native builds also keep a Preferences copy, so only web storage failing on its own is fatal there.
     return !saveError || !!prefs;
   }
   function clearSave() {
+    lastRaw = null;
     if (cgData) { try { cgData.removeItem(KEY); } catch (e) {} }
     try { localStorage.removeItem(KEY); } catch (e) {}
     var prefs = plugin('Preferences'), cloud = plugin('CloudSave');
@@ -179,12 +218,15 @@
   function syncTime() {
     var http = plugin('CapacitorHttp');
     var p;
+    verified = false; // only a successful response below vouches for the clock
     if (http) {
       p = http.request({ url: 'https://www.apple.com/library/test/success.html', method: 'HEAD', connectTimeout: 5000, readTimeout: 5000 })
         .then(function (r) { var h = r.headers || {}; return h.Date || h.date; });
     } else {
       // Same-origin HEAD works on web (dev server / hosted build).
       p = fetch(location.href, { method: 'HEAD', cache: 'no-store' }).then(function (r) { return r.headers.get('date'); });
+      // A hung request must not hold the event rollover (main.js holdEvent) forever.
+      p = Promise.race([p, new Promise(function (_, rej) { setTimeout(function () { rej(new Error('time sync timeout')); }, 5000); })]);
     }
     return safe(p.then(function (d) {
       var ms = d ? Date.parse(d) : NaN;
@@ -266,13 +308,28 @@
     return p.then(function (ok) {
       if (!ok) return 'nofill';
       adReady = false;
-      return ad.showRewardVideoAd().then(function (item) {
-        preloadAd();
-        return item ? 'earned' : 'dismissed';
-      }, function (e) {
-        console.warn('[platform] show ad', e && e.message);
-        preloadAd();
-        return 'nofill';
+      // The plugin only resolves showRewardVideoAd() once the reward is earned; early dismissal or a
+      // failed present only fire events, so settle from those too or the caller hangs forever.
+      return new Promise(function (resolve) {
+        var earned = false, done = false, handles = [];
+        function finish(r) {
+          if (done) return;
+          done = true;
+          handles.forEach(function (h) { safe(h).then(function (x) { if (x && x.remove) x.remove(); }); });
+          preloadAd();
+          resolve(r);
+        }
+        function on(ev, fn) { if (ad.addListener) handles.push(ad.addListener(ev, fn)); }
+        on('onRewardedVideoAdReward', function () { earned = true; });
+        on('onRewardedVideoAdDismissed', function () { finish(earned ? 'earned' : 'dismissed'); });
+        on('onRewardedVideoAdFailedToShow', function () { finish('nofill'); });
+        ad.showRewardVideoAd().then(function (item) {
+          if (item) earned = true;
+          finish(earned ? 'earned' : 'dismissed');
+        }, function (e) {
+          console.warn('[platform] show ad', e && e.message);
+          finish('nofill');
+        });
       });
     });
   }
@@ -303,7 +360,7 @@
     purchaseHandler = onTransaction;
     var st = plugin('Store');
     if (!st) return Promise.resolve({});
-    safe(st.addListener('transaction', function (tx) { if (purchaseHandler) purchaseHandler(tx); }));
+    safe(st.addListener('transaction', function (tx) { if (purchaseHandler) purchaseHandler(tx, !!tx.restored); }));
     // Google Play needs to know which products to acknowledge (kept) rather than consume.
     var nonConsumables = ((root.GameData && root.GameData.IAP) || []).filter(function (p) { return p.type === 'nonconsumable'; }).map(function (p) { return p.id; });
     return safe(st.getProducts({ ids: ids, nonConsumables: nonConsumables })).then(function (r) {
@@ -360,7 +417,7 @@
   root.Platform = {
     native: native, android: android, demo: DEMO, web: WEB, ADS: ADS, cgReady: cgReady,
     storeName: android ? 'Google Play' : 'App Store',
-    loadSave: loadSave, writeSave: writeSave, clearSave: clearSave, readLocal: readLocal,
+    loadSave: loadSave, forgetCloud: function () { cloudScore = -1; cloudHoldUntil = 0; }, onCloudChange: onCloudChange, writeSave: writeSave, clearSave: clearSave, readLocal: readLocal,
     loadIssue: function () { return loadIssue; }, saveError: function () { return saveError; },
     syncTime: syncTime, now: now, isVerified: function () { return verified; },
     readBackups: readBackups, loadBackups: loadBackups, addBackup: addBackup,

@@ -343,12 +343,19 @@
   function updateWeekly(state, t) {
     var w = state.extras.weekly, key = weekKey(t);
     if (w.week === key) return false;
+    // Weeks only move forward (a wrong clock must not reset goals); finished goals are paid out before the swap.
+    if (w.week && LV() && LV().weekInfo(t).index <= LV().keyIndex(w.week)) return false;
+    var auto = 0;
+    if (w.week) {
+      w.goals.forEach(function (id) { if (claimGoal(state, id)) auto++; });
+      if (claimWeeklyBonus(state, t)) auto++;
+    }
     var rnd = LV().rng(LV().hash(key + ':weekly:' + state.created)), pool = X.WEEKLY.pool.slice(), goals = [];
     while (goals.length < X.WEEKLY.perWeek && pool.length) goals.push(pool.splice(Math.floor(rnd() * pool.length), 1)[0].id);
     var base = {};
     X.WEEKLY.pool.forEach(function (g) { base[g.stat] = counter(state, g.stat); });
     state.extras.weekly = { week: key, goals: goals, base: base, claimed: {}, bonus: false };
-    return true;
+    return { auto: auto };
   }
   function goalDef(id) { return X.WEEKLY.pool.filter(function (g) { return g.id === id; })[0]; }
   function goalProgress(state, id) {
@@ -548,7 +555,8 @@
     ensure(state);
     var ev = [];
     if (LV()) {
-      if (updateWeekly(state, t)) ev.push({ type: 'weekly' });
+      var wkd = updateWeekly(state, t);
+      if (wkd) ev.push({ type: 'weekly', claimed: wkd.auto });
       var before = state.extras.showdown.key, info = updateShowdown(state, t);
       if (info.active && before !== info.key) ev.push({ type: 'showdown', info: info });
     }

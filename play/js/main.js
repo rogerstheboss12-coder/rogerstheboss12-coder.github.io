@@ -22,7 +22,16 @@
   var saveWarnedAt = 0;
   function save(force) {
     if (resetting || !S) return;
-    if (PL.writeSave(E.serialize(S), force) === false && Date.now() - saveWarnedAt > 10 * 60 * 1000) {
+    var wrote = PL.writeSave(E.serialize(S), force);
+    if (wrote === 'other-tab') {
+      // Another tab saved newer progress; stay quiet in this one instead of overwriting it.
+      if (Date.now() - saveWarnedAt > 10 * 60 * 1000) {
+        saveWarnedAt = Date.now();
+        FX.toast('⚠️', T('This tab is out of date'), T('Newer progress was saved in another tab, so this tab stopped saving. Progress made in this tab since then won\'t be saved. Reload this page to pick up your latest progress.'));
+      }
+      return;
+    }
+    if (wrote === false && Date.now() - saveWarnedAt > 10 * 60 * 1000) {
       // Storage full or blocked: tell the player (at most every 10 minutes) instead of failing silently.
       saveWarnedAt = Date.now();
       FX.toast('⚠️', T('Progress not saved'), T('Your browser storage is full or blocked. Export a backup code in Settings to keep your empire safe.'));
@@ -278,10 +287,31 @@
       if (E.saveVersion(json) > E.SAVE_VERSION) { FX.toast('⚠️', T('Import failed'), T('That save is from a newer version of the game. Update first, then import it.')); return; }
       var ns = E.deserialize(json);
       if (XU) XU.snapshot('import');
-      PL.writeSave(E.serialize(ns), true);
+      PL.forgetCloud();
+      PL.writeSave(E.serialize(ns), true, true);
       resetting = true;
       location.reload();
     } catch (e) { FX.toast('⚠️', T('Import failed'), T('That code doesn\'t look like a save.')); }
+  };
+  // Another device's iCloud save has more progress than this one: let the player switch to it.
+  var cloudOffer = null;
+  function offerCloudSave(raw) {
+    cloudOffer = raw;
+    UI.modal(UI.head('☁️ ' + tE('Newer iCloud save'), '') + '<div class="modal-body"><p>' + tE('Another device has a save with more progress. Load it here? Your current progress on this device will be replaced.') + '</p><div class="dialog-actions"><button class="btn blue" data-act="cloudKeep">' + tE('Keep this one') + '</button><button class="btn" data-act="cloudLoad">' + tE('Load iCloud save') + '</button></div></div>', 'small');
+  }
+  // Keeping this device's save: forget the higher iCloud score and push ours, so the next launch doesn't load iCloud's.
+  ACT.cloudKeep = function () {
+    PL.forgetCloud();
+    PL.writeSave(E.serialize(S), true);
+    UI.closeTop();
+  };
+  ACT.cloudLoad = function () {
+    if (!cloudOffer) return;
+    if (XU) XU.snapshot('cloud');
+    PL.forgetCloud();
+    PL.writeSave(cloudOffer, true);
+    resetting = true;
+    location.reload();
   };
   ACT.hardReset = function () {
     UI.modal(UI.head('⚠️ ' + tE('Reset everything?'), tE('This cannot be undone')) + '<div class="modal-body"><p>' + tE(!PL.native ? 'All worlds, Liberty Bucks and achievements saved in this browser will be erased.' : PL.android ? 'All worlds, Liberty Bucks and achievements on this device will be erased. Purchases can be restored.' : 'All worlds, Liberty Bucks and achievements on this device and in iCloud will be erased. Purchases can be restored.') + '</p><div class="dialog-actions"><button class="btn blue" data-act="close">' + tE('Keep playing') + '</button><button class="btn red" data-act="hardResetConfirm">' + tE('Erase my empire') + '</button></div></div>', 'small');
@@ -427,12 +457,12 @@
       if (rw.lb) S.lb += rw.lb;
       if (rw.speech) S.speechUntil = Math.min(Math.max(S.speechUntil, t) + rw.speech * 1000, t + 24 * 3600 * 1000);
       if (rw.rally) S.rallyUntil = Math.max(S.rallyUntil, t) + rw.rally * 1000;
-      if (rw.warp) r.gain += E.simulateAway(S, rw.warp, S.world)[S.world];
+      if (rw.warp) { var ww = S.world < D.MAIN_WORLDS ? S.world : 0; r.gain += E.simulateAway(S, rw.warp, ww)[ww]; }
       if (rw.card) r.cards = r.cards.concat(LV.grantCards(S, rw.card));
     }
     A.play('fanfare', 0.8); PL.haptic('success');
     FX.confetti(innerWidth / 2, innerHeight / 2, 90);
-    FX.toast(r.reward.icon, T('Day {n} reward!', { n: r.day }) + (double ? ' ×2' : ''), UI.dailyLabel(r.reward) + (r.gain ? ' · +' + money(r.gain) : ''));
+    FX.toast(r.reward.icon, T('Day {n} reward!', { n: r.day }) + (double ? ' ×2' : ''), UI.dailyLabel(r.reward) + (r.gain ? ' · +' + money(r.gain, E.isMain(S.world) ? S.world : 0) : ''));
     LVU.announceCards(r.cards);
     AN.track('daily', { day: r.day, streak: S.daily.streak, double: !!double });
     LVU.award('daily');
@@ -462,7 +492,7 @@
       else if (r && r.status === 'pending') FX.toast('⏳', T('Purchase pending'), T('We\'ll deliver it as soon as it\'s approved.'));
       else if (r && r.status === 'failed') {
         AN.track('purchase_failed', { id: p.id, error: String(r.error || '').slice(0, 60) });
-        FX.toast('⚠️', T('Purchase failed'), /not found|load products/i.test(r.error || '') ? T(PL.android ? 'This item isn\'t available from Google Play right now. Please try again later.' : 'This item isn\'t available from the App Store right now. Please try again later.') : esc(r.error || ''));
+        FX.toast('⚠️', T('Purchase failed'), /not found|load products/i.test(r.error || '') ? T(PL.android ? 'This item isn\'t available from Google Play right now. Please try again later.' : 'This item isn\'t available from the App Store right now. Please try again later.') : /already own/i.test(r.error || '') ? T('You already own this. It has been added to your account.') : T('Purchase failed. Please try again.'));
       }
     });
   };
@@ -501,10 +531,9 @@
 
   // Applies a StoreKit transaction exactly once, then finishes it.
   function onTransaction(tx, isRestore) {
-    var p = E.grantIAP(S, tx.productId, tx.transactionId);
+    var p = E.grantIAP(S, tx.productId, tx.transactionId, isRestore);
     PL.finish(tx.transactionId);
     if (!p) return false;
-    if (isRestore && p.type !== 'nonconsumable') return false;
     A.play('fanfare', 1); PL.haptic('success');
     FX.confetti(innerWidth / 2, innerHeight / 2, 150);
     var msg = p.noAds ? T('Founding Fathers Pack unlocked: ×3 profit and no ads, forever.') : p.pass ? T('Premium Liberty Pass unlocked! Claim your rewards in the Pass.') : T('+{n} Liberty Bucks', { n: F.num(p.lb) });
@@ -776,16 +805,18 @@
   var lastOffline = null;
   function applyOffline(verified) {
     var t = E.now();
+    E.updateEvent(S, t);
     var cr = E.offlineCredit(S, t, verified);
     if (cr.rollback) {
+      E.releaseEvent(S, t);
       S.lastSeen = t;
       FX.toast('⏰', T('Clock changed'), T('Your device clock moved backwards, so offline earnings were skipped.'));
       AN.track('clock_rollback', {});
       return;
     }
-    if (cr.away < 30) { S.lastSeen = t; return; }
+    if (cr.away < 30) { E.releaseEvent(S, t); S.lastSeen = t; return; }
     var night = E.field(S, 'offline');
-    var gains = E.simulateAway(S, cr.credit, null, false, night);
+    var gains = E.creditAway(S, cr.credit, t, night);
     S.lastSeen = t;
     X.accrue(S, cr.credit);
     if (LV.onReturn(S, cr.away, t)) LVU.queueOffer();
@@ -872,6 +903,7 @@
     lastResume = t;
     A.pause(false);
     PL.cancelNotifications();
+    E.holdEvent(true);
     PL.syncTime().then(function (v) { applyOffline(v); });
   }
 
@@ -900,7 +932,14 @@
   function loop(ts) {
     var dt = (ts - last) / 1000; last = ts;
     var t = E.now();
-    if (dt > 2) E.simulateAway(S, dt);
+    if (dt > 2) {
+      if (dt < 30) { if (!PL.native) { E.simulateAway(S, dt); S.lastSeen = t; } } // native: the resume handler credits every gap; web: lastSeen stops resume re-crediting it
+      else if (!PL.native && Date.now() - lastResume > 5000) { // long gap with no lifecycle event (laptop sleep); native relies on the resume listener
+        S.lastSeen = t - dt * 1000; // credit only the gap
+        applyOffline(false);
+      }
+      // otherwise onResume's applyOffline credits it
+    }
     else if (dt > 0) {
       var paid = E.tick(S, dt, t);
       var mine = paid[S.world];
@@ -1039,6 +1078,7 @@
       XU.init({ save: save, travel: travel, spawnCatch: spawnCatch, runAuto: runAuto });
       UI.applySettings();
       TU.init(S);
+      E.holdEvent(true);
       E.updateEvent(S, E.now());
       if (!S.unlocked[S.world]) S.world = 0;
       UI.renderWorld(); lastWorld = S.world; lastEventKey = S.worlds[D.EVENT_INDEX].eventKey;
@@ -1049,6 +1089,7 @@
       };
       document.addEventListener('pointerdown', firstGesture);
       PL.onLifecycle(onPause, onResume);
+      PL.onCloudChange(function () { return E.progressScore(S); }, offerCloudSave);
       window.addEventListener('beforeunload', function () { save(true); });
       scheduleCatch(true);
       scheduleMechanics(E.now());

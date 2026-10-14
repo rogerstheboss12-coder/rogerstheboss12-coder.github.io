@@ -470,7 +470,7 @@
       if (e.type === 'debate') { queuedDebate = true; if (e.result.won) award('debate'); A.play(e.result.won ? 'cheer' : 'achieve', 0.7); }
       if (e.type === 'showdown' && L.unlocked(s, 'race')) FX.toast(e.info.boss.emoji, T('Showdown: {boss} attacks!', { boss: T(e.info.boss.name) }), T('24 hours to defeat it. Everything you do deals damage.'));
       if (e.type === 'board') FX.toast(e.board.emoji || '🏅', T('Final rank: #{r} of {n}', { r: e.board.result.rank, n: e.board.result.size }), T('Open Leaderboards to claim {w}.', { w: rewardText(e.board.result) }), { minor: true });
-      if (e.type === 'weekly') FX.toast('🗓️', T('New weekly goals!'), T('Five new goals are live. Finish all five for a bonus chest.'), { minor: true });
+      if (e.type === 'weekly') FX.toast('🗓️', T('New weekly goals!'), e.claimed ? T('Finished goals from last week were claimed for you.') : T('Five new goals are live. Finish all five for a bonus chest.'), { minor: true });
     });
     if (s.extras.recap && !UI.anyModal()) {
       var r = s.extras.recap; s.extras.recap = null;
@@ -578,7 +578,8 @@
       try { E.deserialize(b.data); } catch (e) { FX.toast('⚠️', T('Import failed'), T('That code doesn\'t look like a save.')); return; }
       var data = b.data;
       snapshot('restore');
-      PL.writeSave(data, true);
+      PL.forgetCloud();
+      PL.writeSave(data, true, true);
       if (root.Game && root.Game.reloadWithoutSave) root.Game.reloadWithoutSave();
     }
   };

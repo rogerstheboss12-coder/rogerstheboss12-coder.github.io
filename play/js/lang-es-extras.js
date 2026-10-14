@@ -200,6 +200,7 @@ I18N.register('es', {
   "Time Warps pay out on your current main world.": "Los Saltos Temporales se cobran en tu mundo principal actual.",
   "Open": "Abrir",
   "Weekly goal complete!": "¡Meta semanal cumplida!",
+  "Finished goals from last week were claimed for you.": "Se reclamaron por ti las metas terminadas de la semana pasada.",
   "New weekly goals!": "¡Nuevas metas semanales!",
   "Five new goals are live. Finish all five for a bonus chest.": "Hay cinco metas nuevas. Complétalas todas para un cofre extra.",
   "Weekly goals ready to claim.": "Metas semanales listas para reclamar.",

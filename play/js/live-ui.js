@@ -323,8 +323,8 @@
   function onEvents(evs) {
     evs.forEach(function (e) {
       if (e.type === 'offer') queuedOffer = true;
-      if (e.type === 'raceResult') queuedRace = true;
-      if (e.type === 'season') FX.toast('✪', T('A new Liberty Pass season!'), tE(e.info.name));
+      if (e.type === 'raceResult') { queuedRace = true; if (e.claimed) FX.toast('🏁', T('Race rewards claimed!'), T('Last week\'s unclaimed race reward was claimed for you.'), { minor: true }); }
+      if (e.type === 'season') FX.toast('✪', T('A new Liberty Pass season!'), e.claimed ? T('Unclaimed pass rewards were claimed for you.') : tE(e.info.name));
     });
   }
   function slowTick() {

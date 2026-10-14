@@ -414,11 +414,12 @@
   var UNVERIFIED_CAP = 8 * 3600;
 
   // Credits managed earnings for `seconds` without simulating individual cycles. `mult` scales the payout (Night Session).
-  function simulateAway(state, seconds, onlyWorld, allBusinesses, mult) {
+  // eventSecs (optional) caps the time credited to the event world, which only exists since its window started.
+  function simulateAway(state, secs, onlyWorld, allBusinesses, mult, eventSecs) {
     var gains = [];
     for (var wi = 0; wi < state.worlds.length; wi++) {
       if (!state.unlocked[wi] || (onlyWorld != null && wi !== onlyWorld)) { gains.push(0); continue; }
-      var ws = state.worlds[wi];
+      var ws = state.worlds[wi], seconds = wi === D.EVENT_INDEX && eventSecs != null ? Math.min(secs, eventSecs) : secs;
       var g = incomePerSec(state, wi, allBusinesses ? false : true) * seconds;
       if (!allBusinesses) {
         var mults = worldMults(state, wi);
@@ -543,9 +544,30 @@
   }
   function eventTheme(t) { return eventWindow(t).event; }
   function eventSetId(eventId) { return eventId === 'fest' ? 'fest' : 'ev_' + eventId; }
+  // Boot and resume hold the event rollover until offline earnings are credited (creditAway), so the old event's last hours count.
+  var eventHold = false;
+  function holdEvent(on) { eventHold = !!on; }
+  function releaseEvent(state, t) { eventHold = false; return updateEvent(state, t); }
+  // Offline earnings for every world. If the event window rolled while away, the old event world is credited lifetime only
+  // (tier and claim progress, never cash or the offline summary), then settled; the new one gets the rest of the budget.
+  // A save with no event key has no old event: its world is discarded, so nothing is credited to it.
+  function creditAway(state, credit, t, mult) {
+    var ei = D.EVENT_INDEX, ws = state.worlds[ei], win = eventWindow(t);
+    var oldSlot = ws.eventKey ? parseInt(String(ws.eventKey).slice(1), 10) : NaN;
+    var replaces = ws.eventKey !== win.key && !(oldSlot > win.slot);
+    var newSecs = Math.max(0, (t - win.start) / 1000), oldSpan = 0;
+    if (replaces && oldSlot < win.slot) oldSpan = Math.max(0, Math.min(credit, (D.Events.slotInfo(oldSlot).end - (state.lastSeen || 0)) / 1000));
+    var gains = simulateAway(state, credit, null, false, mult, replaces ? 0 : newSecs);
+    if (oldSpan > 0) simulateAway(state, oldSpan, ei, false, mult);
+    releaseEvent(state, t);
+    if (replaces && state.worlds[ei] !== ws) gains[ei] += simulateAway(state, Math.max(0, Math.min(credit - oldSpan, newSecs)), ei, false, mult)[ei];
+    return gains;
+  }
   function updateEvent(state, t) {
     var ei = D.EVENT_INDEX, win = eventWindow(t), ws = state.worlds[ei];
-    if (ws.eventKey !== win.key) {
+    // Never roll the event world backwards: a wrong or flapping clock must not restart an event (re-claimable tiers).
+    var oldSlot = ws.eventKey ? parseInt(String(ws.eventKey).slice(1), 10) : NaN;
+    if (ws.eventKey !== win.key && !(oldSlot > win.slot) && !eventHold) {
       // Rewards the player reached but didn't claim are granted automatically when an event ends.
       if (ws.eventKey && ws.eventId) {
         var got = claimEventTiers(state);
@@ -655,7 +677,7 @@
     if (r.speech) state.speechUntil = Math.min(Math.max(state.speechUntil, t) + r.speech * 1000, t + 24 * 3600 * 1000);
     if (r.rally) state.rallyUntil = Math.max(state.rallyUntil, t) + r.rally * 1000;
     var gain = 0;
-    if (r.warp) gain = simulateAway(state, r.warp, state.world)[state.world];
+    if (r.warp) gain = simulateAway(state, r.warp, isMain(state.world) ? state.world : 0)[isMain(state.world) ? state.world : 0];
     var cards = r.card && LV() && state.live ? LV().grantCards(state, r.card) : [];
     return { reward: r, day: st.index + 1, gain: gain, cards: cards };
   }
@@ -712,14 +734,17 @@
   }
 
   // Applies a completed real-money purchase. Idempotent per transaction id.
-  function grantIAP(state, productId, transactionId) {
+  // A restore of a nonconsumable re-grants the entitlement only, never the Liberty Bucks (already paid out; a reset wipes the ledger).
+  // Restored/unconsumed consumables still pay their Liberty Bucks once; the per-transaction ledger blocks repeats.
+  function grantIAP(state, productId, transactionId, isRestore) {
     var p = D.IAP.filter(function (x) { return x.id === productId; })[0];
     if (!p) return null;
     var key = transactionId || productId;
     if (state.iap.purchases[key]) return null;
     if (p.type === 'nonconsumable' && state.iap.founding && p.noAds) { state.iap.purchases[key] = now(); return null; }
+    if (isRestore && (p.pass ? state.live && state.live.pass.premium : p.offer && state.live && state.live.offers.bought[p.offer])) { state.iap.purchases[key] = now(); return null; }
     state.iap.purchases[key] = now();
-    if (p.lb) state.lb += p.lb;
+    if (p.lb && !(isRestore && p.type === 'nonconsumable')) state.lb += p.lb;
     if (p.noAds) state.iap.founding = true;
     if (LV() && state.live) LV().grantProduct(state, p, now());
     return p;
@@ -834,8 +859,9 @@
   // Picks the save with more progress (used to reconcile device vs. cloud).
   function progressScore(s) {
     if (!s) return -1;
-    var score = (s.amendments || 0) * 1e6 + (s.stats ? s.stats.playtime : 0);
-    return score;
+    // Ordered like a tuple (purchases, amendments + conventions, playtime): each field sits in its own digit range, so playtime can never outrank purchases.
+    var bought = s.iap && s.iap.purchases ? Object.keys(s.iap.purchases).length : 0;
+    return bought * 1e13 + Math.min((s.amendments || 0) + (s.conventions || 0), 999) * 1e10 + Math.min(s.stats ? s.stats.playtime : 0, 1e10 - 1);
   }
 
   root.Engine = {
@@ -852,7 +878,7 @@
     tick: tick, tickWorld: tickWorld, simulateAway: simulateAway, UNVERIFIED_CAP: UNVERIFIED_CAP, offlineCredit: offlineCredit,
     activeEffects: activeEffects, spawnFlare: spawnFlare, extendFlare: extendFlare, treatyOffer: treatyOffer, signTreaty: signTreaty,
     chargeLoops: chargeLoops, loopProgress: loopProgress, useLoop: useLoop, anchorMult: anchorMult, setAnchor: setAnchor,
-    eventWindow: eventWindow, eventTheme: eventTheme, updateEvent: updateEvent, forceEvent: forceEvent,
+    eventWindow: eventWindow, eventTheme: eventTheme, updateEvent: updateEvent, holdEvent: holdEvent, releaseEvent: releaseEvent, creditAway: creditAway, forceEvent: forceEvent,
     eventTiersReady: eventTiersReady, claimEventTiers: claimEventTiers, eventTiersReached: eventTiersReached, eventSetId: eventSetId,
     missionProgress: missionProgress, activeMissions: activeMissions, missionComplete: missionComplete,
     claimMission: claimMission, claimMissionFull: claimMissionFull, claimableMissions: claimableMissions,
