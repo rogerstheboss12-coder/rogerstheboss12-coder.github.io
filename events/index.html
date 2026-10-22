@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-itunes-app" content="app-id=6816208938">
+<title>Events — Star-Spangled Tycoon (free idle game)</title>
+<meta name="description" content="Live and upcoming three-day events in Star-Spangled Tycoon, a free idle game.">
+<link rel="canonical" href="https://rogerstheboss12-coder.github.io/events/">
+
+<style>
+body{margin:0;padding:16px;font:16px/1.5 system-ui,sans-serif;background:#0b1433;color:#f4f4f4}
+main{max-width:720px;margin:0 auto}
+a{color:#ffd166}
+.btn{display:inline-block;margin:4px 8px 4px 0;padding:10px 16px;border-radius:8px;background:#c8102e;color:#fff;text-decoration:none;font-weight:700}
+.btn.off{background:#444}
+li{margin:6px 0}
+</style>
+</head>
+<body>
+<main>
+<h1>Events</h1>
+<h2>Live now</h2>
+<p>🎸 <a href="/events/music/"><strong>Rock &#39;n&#39; Roll Road Trip</strong></a>
+ · ends in <span id="ends" data-end="1792731600000"></span></p>
+<h2>Next 5 events</h2>
+<ol>
+<li><time datetime="2026-10-23T05:00:00.000Z">Fri, Oct 23, 2026</time>: <a href="/events/farm/">🐄 Barnyard Bonanza</a></li>
+<li><time datetime="2026-10-26T05:00:00.000Z">Mon, Oct 26, 2026</time>: <a href="/events/hoops/">🏀 Hoop Dreams</a></li>
+<li><time datetime="2026-10-29T05:00:00.000Z">Thu, Oct 29, 2026</time>: <a href="/events/spooky/">🎃 Monster Mash</a></li>
+<li><time datetime="2026-11-01T05:00:00.000Z">Sun, Nov 1, 2026</time>: <a href="/events/election/">🗳️ Election Night</a></li>
+<li><time datetime="2026-11-04T06:00:00.000Z">Wed, Nov 4, 2026</time>: <a href="/events/wildwest/">🤠 Wild West Showdown</a></li>
+</ol>
+<p><a href="/events/feed.json">feed.json</a> · <a href="/events/calendar.ics">calendar.ics</a></p>
+<script>(function(){var el=document.getElementById('ends');function t(){var m=+el.dataset.end-Date.now();if(m<=0){el.textContent='now (refresh the page)';return}var h=Math.floor(m/3600000),d=Math.floor(h/24);el.textContent=(d?d+'d ':'')+(h%24)+'h '+Math.floor(m%3600000/60000)+'m';}t();setInterval(t,30000);})();</script>
+</main>
+</body>
+</html>

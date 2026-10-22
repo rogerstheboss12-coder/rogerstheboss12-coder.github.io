@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="apple-itunes-app" content="app-id=6816208938">
+<title>Election Night Bingo · Star-Spangled Tycoon</title>
+<meta name="description" content="Free election night bingo card. Tap squares as they happen and share yours.">
+<style>
+:root{--bg:#0b1020;--ink:#f4f1e8;--muted:#a9b3cc;--gold:#f5c542;--card:#151d36;--line:#2a3660}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f4f1e8;--ink:#0b1020;--muted:#4a5577;--gold:#b8860b;--card:#fff;--line:#d6d2c4}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,sans-serif}
+main{max-width:520px;margin:0 auto;padding:24px 16px 40px}
+h1{font-size:28px;margin:8px 0 4px}
+.sub{color:var(--muted);margin:0 0 18px}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.grid button{aspect-ratio:1;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:600 12px/1.15 system-ui,sans-serif;padding:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center}
+.grid button.on{background:var(--gold);color:#0b1020;border-color:var(--gold)}
+.grid button.free{font-size:15px;letter-spacing:.05em}
+.row{display:flex;gap:10px;margin:18px 0}
+.row button,.btn{flex:1;padding:12px;border-radius:10px;border:0;background:var(--gold);color:#0b1020;font:700 16px system-ui,sans-serif;cursor:pointer;text-align:center;text-decoration:none}
+.row button.alt{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+.cta{text-align:center;margin-top:12px}
+.cta a{color:var(--gold)}
+.deck{display:block;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);text-decoration:none;margin:12px 0}
+.deck.live{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold) inset}
+.deck b{font-size:18px}
+.tag{display:inline-block;font-size:12px;font-weight:700;color:#0b1020;background:var(--gold);border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:middle}
+.dates{color:var(--muted);font-size:14px;margin-top:4px}
+</style>
+</head>
+<body>
+<main>
+<h1>Election Night Bingo</h1>
+<p class="sub">Tap squares as they happen. Parody only.</p>
+<div class="grid" id="grid" aria-label="Bingo card"></div>
+<div class="row"><button id="new" class="alt" type="button">New card</button><button id="share" type="button">Share card</button></div>
+<p class="cta"><a href="https://apps.apple.com/app/id6816208938">Get Star-Spangled Tycoon free on the App Store</a></p>
+</main>
+<script>
+(function(){
+var DECK={"id":"election-night","title":"Election Night Bingo","squares":["Anchor says it is too close to call","Map zooms into one county","Someone demands a recount","Magic wall lights up for no reason","\"New numbers just in\" (none are new)","Pundit draws on the touchscreen","Chyron has a spelling mistake","Exit poll is wrong by forty points","Someone's grandma explains the electoral college","Three panelists talk over each other","Ominous music plays over a bar chart","Weather map suddenly becomes a color map","Stock photo of a ballot box","Someone says \"the night is young\" at 1 AM","Anchor pretends to be surprised","Live shot of an empty podium","Hologram of a pundit's head","Sheet cake appears in the newsroom","Someone refreshes the page 40 times","The BREAKING banner in a new font","Pollster explains the margin of error","A dog wanders into the background","Someone pulls up a graph from 2008","Man in a vest walks through the shot","Confetti cannon fires too early","Reporter says \"we are waiting for more data\"","Crowd chants a single word","On-screen clock stuck at 3:00 AM","Someone says \"it is a marathon, not a sprint\"","Map turns a new color by accident","Anchor reads a number off a sticky note","Someone hides under the desk"]};
+var q=new URLSearchParams(location.search);
+var seed=parseInt(q.get('seed'),10);
+if(!(seed>=0)){seed=Math.floor(Math.random()*1e9);history.replaceState(null,'','?seed='+seed+'&ref=bingo');}
+function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+var r=rng(seed),arr=DECK.squares.slice();
+for(var i=arr.length-1;i>0;i--){var j=Math.floor(r()*(i+1));var t=arr[i];arr[i]=arr[j];arr[j]=t;}
+var cells=arr.slice(0,12).concat(['FREE'],arr.slice(12,24));
+var grid=document.getElementById('grid');
+cells.forEach(function(text,k){
+  var b=document.createElement('button');
+  b.type='button';b.textContent=text;
+  if(text==='FREE'){b.className='on free';}
+  else b.addEventListener('click',function(){b.classList.toggle('on');});
+  grid.appendChild(b);
+});
+function wrap(ctx,text,x,y,maxW,lh){var words=text.split(' '),line='';for(var n=0;n<words.length;n++){var test=line+words[n]+' ';if(ctx.measureText(test).width>maxW&&n>0){ctx.fillText(line,x,y);line=words[n]+' ';y+=lh;}else line=test;}ctx.fillText(line,x,y);}
+function draw(){
+  var c=document.createElement('canvas');c.width=1080;c.height=1350;var ctx=c.getContext('2d');
+  var g=ctx.createLinearGradient(0,0,0,1350);g.addColorStop(0,'#0b1020');g.addColorStop(1,'#1d2a5a');
+  ctx.fillStyle=g;ctx.fillRect(0,0,1080,1350);
+  ctx.fillStyle='#f5c542';ctx.font='700 40px system-ui,sans-serif';ctx.textAlign='center';
+  ctx.fillText('STAR-SPANGLED TYCOON',540,110);
+  ctx.fillStyle='#f4f1e8';ctx.font='800 64px system-ui,sans-serif';ctx.fillText(DECK.title,540,200);
+  var cell=176,gap=8,x0=84,y0=290;
+  var marks=[].slice.call(grid.children);
+  marks.forEach(function(b,k){
+    var col=k%5,row=Math.floor(k/5),x=x0+col*(cell+gap),y=y0+row*(cell+gap);
+    var on=b.classList.contains('on');
+    ctx.fillStyle=on?'#f5c542':'#151d36';ctx.fillRect(x,y,cell,cell);
+    ctx.fillStyle=on?'#0b1020':'#f4f1e8';ctx.font='700 22px system-ui,sans-serif';
+    if(b.classList.contains('free')){ctx.font='800 34px system-ui,sans-serif';ctx.fillText('FREE',x+cell/2,y+cell/2+12);}
+    else{ctx.save();ctx.beginPath();ctx.rect(x,y,cell,cell);ctx.clip();wrap(ctx,b.textContent,x+cell/2,y+38,cell-20,26);ctx.restore();}
+  });
+  ctx.fillStyle='#f4f1e8';ctx.font='600 30px system-ui,sans-serif';
+  ctx.fillText('Star-Spangled Tycoon · free on the App Store', 540, 1270);
+  ctx.fillStyle='#a9b3cc';ctx.font='24px system-ui,sans-serif';
+  ctx.fillText('Card #' + seed, 540, 1315);
+  return c;
+}
+function download(blob,name){var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();}
+var shareUrl=location.origin+'/bingo/'+DECK.id+'/?seed='+seed+'&ref=bingo';
+document.getElementById('share').addEventListener('click',function(){
+  draw().toBlob(function(blob){
+    var name='bingo-'+DECK.id+'-'+seed+'.png';
+    var file=new File([blob],name,{type:'image/png'});
+    var data={title:DECK.title,text:'My card: '+shareUrl,url:shareUrl};
+    if(navigator.canShare&&navigator.canShare({files:[file]})){data.files=[file];}
+    if(navigator.share){navigator.share(data).catch(function(){});}
+    else download(blob,name);
+  },'image/png');
+});
+document.getElementById('new').addEventListener('click',function(){location.href='?seed='+Math.floor(Math.random()*1e9)+'&ref=bingo';});
+})();
+</script>
+</body>
+</html>

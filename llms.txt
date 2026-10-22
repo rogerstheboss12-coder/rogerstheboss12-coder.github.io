@@ -1,0 +1,16 @@
+# Star-Spangled Tycoon
+
+> A lighthearted parody idle tycoon game for iPhone and iPad (also playable on the web). Free on the App Store.
+
+## Play
+- [App Store (app id 6816208938)](https://apps.apple.com/app/id6816208938): free on iPhone and iPad (the main way to play)
+- [Play in your browser](https://rogerstheboss12-coder.github.io/play/): the same game on the web, no install
+- [itch.io](https://starspangledtycoon.itch.io/star-spangled-tycoon): the web game on itch
+
+## Docs
+- [FAQ](https://rogerstheboss12-coder.github.io/faq/): common questions and answers
+- [Guide](https://rogerstheboss12-coder.github.io/guide/): how the game works
+- [Press kit](https://rogerstheboss12-coder.github.io/press/): fact sheet, features, images and logo
+
+## Full text
+- [llms-full.txt](https://rogerstheboss12-coder.github.io/llms-full.txt): every FAQ answer and the press description

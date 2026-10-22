@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="apple-itunes-app" content="app-id=6816208938">
+<title>Bingo Cards · Star-Spangled Tycoon</title>
+<meta name="description" content="Free seasonal bingo cards for the news, the holidays and the big game.">
+<style>
+:root{--bg:#0b1020;--ink:#f4f1e8;--muted:#a9b3cc;--gold:#f5c542;--card:#151d36;--line:#2a3660}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f4f1e8;--ink:#0b1020;--muted:#4a5577;--gold:#b8860b;--card:#fff;--line:#d6d2c4}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,sans-serif}
+main{max-width:520px;margin:0 auto;padding:24px 16px 40px}
+h1{font-size:28px;margin:8px 0 4px}
+.sub{color:var(--muted);margin:0 0 18px}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.grid button{aspect-ratio:1;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:600 12px/1.15 system-ui,sans-serif;padding:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center}
+.grid button.on{background:var(--gold);color:#0b1020;border-color:var(--gold)}
+.grid button.free{font-size:15px;letter-spacing:.05em}
+.row{display:flex;gap:10px;margin:18px 0}
+.row button,.btn{flex:1;padding:12px;border-radius:10px;border:0;background:var(--gold);color:#0b1020;font:700 16px system-ui,sans-serif;cursor:pointer;text-align:center;text-decoration:none}
+.row button.alt{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+.cta{text-align:center;margin-top:12px}
+.cta a{color:var(--gold)}
+.deck{display:block;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);text-decoration:none;margin:12px 0}
+.deck.live{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold) inset}
+.deck b{font-size:18px}
+.tag{display:inline-block;font-size:12px;font-weight:700;color:#0b1020;background:var(--gold);border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:middle}
+.dates{color:var(--muted);font-size:14px;margin-top:4px}
+</style>
+</head>
+<body>
+<main>
+<h1>Bingo Cards</h1>
+<p class="sub">Pick a card, tap squares as they happen, then share yours.</p>
+<a class="deck" href="/bingo/election-night/">
+<b>Election Night Bingo</b>
+<div class="dates">2026-10-25 to 2026-11-05</div>
+</a>
+<a class="deck" href="/bingo/thanksgiving-dinner/">
+<b>Thanksgiving Dinner Bingo</b>
+<div class="dates">2026-11-12 to 2026-11-28</div>
+</a>
+<a class="deck" href="/bingo/big-game-ads/">
+<b>Big Game Ads Bingo</b>
+<div class="dates">2027-01-30 to 2027-02-10</div>
+</a>
+<p class="cta"><a href="https://apps.apple.com/app/id6816208938">Get Star-Spangled Tycoon free on the App Store</a></p>
+</main>
+</body>
+</html>
