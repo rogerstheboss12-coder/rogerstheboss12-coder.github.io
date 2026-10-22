@@ -427,7 +427,10 @@
     var ev = s.worlds[D.EVENT_INDEX];
     if (ev.lifetime > 1 && X.gcPeriodMatches('event', E.now())) PL.gcSubmit(lb.event, Math.floor(Math.log10(ev.lifetime) * 1000));
     var sd = X.showdownInfo(E.now());
-    if (sd.active && s.extras.showdown.key === sd.key && s.extras.showdown.dmg > 0 && X.gcPeriodMatches('showdown', E.now())) PL.gcSubmit(lb.showdown, s.extras.showdown.dmg);
+    if (sd.active && s.extras.showdown.key === sd.key && s.extras.showdown.dmg > 0) {
+      if (X.gcPeriodMatches('showdown', E.now())) PL.gcSubmit(lb.showdown, s.extras.showdown.dmg);
+      PL.gcSubmit(lb.showdownbest, s.extras.showdown.dmg); // classic board: no period to match
+    }
     var rep = s.extras.gc || (s.extras.gc = {});
     G.achievements.forEach(function (id) { if (s.achievements[id] && !rep[id]) { rep[id] = 1; PL.gcAchieve(G.achPrefix + id, 100); } });
   }

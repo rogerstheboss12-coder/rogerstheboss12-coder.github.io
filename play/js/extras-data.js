@@ -172,6 +172,7 @@
     leaderboards: {
       event: GC_PREFIX + 'lb.event',          // recurring, 3 days: event score (log scale ×1000)
       showdown: GC_PREFIX + 'lb.showdown',    // recurring, weekly: Showdown damage
+      showdownbest: GC_PREFIX + 'lb.showdownbest', // classic, best Showdown damage ever (the Showdown challenge is built on this)
       amendments: GC_PREFIX + 'lb.amendments',
       achievements: GC_PREFIX + 'lb.achievements',
       racewins: GC_PREFIX + 'lb.racewins'
