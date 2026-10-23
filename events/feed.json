@@ -1,12 +1,5 @@
 [
   {
-    "id": "music",
-    "name": "Rock 'n' Roll Road Trip",
-    "start": "2026-10-20T05:00:00.000Z",
-    "end": "2026-10-23T05:00:00.000Z",
-    "url": "https://rogerstheboss12-coder.github.io/events/music/"
-  },
-  {
     "id": "farm",
     "name": "Barnyard Bonanza",
     "start": "2026-10-23T05:00:00.000Z",
@@ -145,5 +138,12 @@
     "start": "2026-12-19T06:00:00.000Z",
     "end": "2026-12-22T06:00:00.000Z",
     "url": "https://rogerstheboss12-coder.github.io/events/racing/"
+  },
+  {
+    "id": "winter",
+    "name": "Winter Wonderland",
+    "start": "2026-12-22T06:00:00.000Z",
+    "end": "2026-12-25T06:00:00.000Z",
+    "url": "https://rogerstheboss12-coder.github.io/events/winter/"
   }
 ]
