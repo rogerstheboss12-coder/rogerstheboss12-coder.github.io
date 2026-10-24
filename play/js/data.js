@@ -25,7 +25,7 @@
       accent: '#c8102e',
       businesses: [
         biz('Flag Stand', 4, 1.07, 0.6, 2.4, 'Waving since 1776.'),
-        biz('Bald Eagle Hatchery', 60, 1.15, 3, 3, 'Majestic. Loud. Profitable.'),
+        biz('Bald Eagle Hatchery', 30, 1.15, 3, 3, 'Majestic. Loud. Profitable.'),
         biz('Apple Pie Diner', 720, 1.14, 6, 8, 'As American as… well.'),
         biz('Fireworks Factory', 8640, 1.13, 12, 24, 'Every day is the Fourth.'),
         biz('Monster Truck Rally', 103680, 1.12, 24, 48, 'Sunday! Sunday! SUNDAY!'),

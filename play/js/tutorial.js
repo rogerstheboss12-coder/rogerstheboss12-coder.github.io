@@ -13,9 +13,9 @@
       done: function () { return W0().lifetime > 0 || W0().biz[0].owned > 1; } },
     { text: 'Cha-ching! Buy another Flag Stand to earn more per tap.', target: function () { return q('.biz:nth-child(1) .biz-buy'); },
       done: function () { return W0().biz[0].owned >= 2; } },
-    { text: 'Keep tapping and buying. Save $60 to open the Bald Eagle Hatchery.',
+    { text: 'Keep tapping and buying. Save $30 to open the Bald Eagle Hatchery.',
       // Point at what the player should do right now: tap to earn until they can afford the unlock.
-      target: function () { return W0().cash >= 60 ? q('.biz:nth-child(2) .biz-buy') : q('.biz:nth-child(1) .biz-icon'); },
+      target: function () { return W0().cash >= 30 ? q('.biz:nth-child(2) .biz-buy') : q('.biz:nth-child(1) .biz-icon'); },
       done: function () { return W0().biz[1].owned >= 1; } },
     { text: 'Every 25 of a business doubles its speed! Grow your empire until you have $1,000.', target: function () { return q('#cash-box'); },
       done: function () { return W0().cash >= 1000 || W0().biz[0].manager; } },

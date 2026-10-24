@@ -286,7 +286,7 @@ I18N.register('es', {
   "Jupiter Gas Station": "Gasolinera de Júpiter",
   "Jupiter gas prices soar to $4.99 per cubic kilometer": "El gas de Júpiter se dispara a $4.99 por kilómetro cúbico",
   "Keep playing": "Seguir jugando",
-  "Keep tapping and buying. Save $60 to open the Bald Eagle Hatchery.": "Sigue tocando y comprando. Ahorra $60 para abrir el Criadero de Águilas Calvas.",
+  "Keep tapping and buying. Save $30 to open the Bald Eagle Hatchery.": "Sigue tocando y comprando. Ahorra $30 para abrir el Criadero de Águilas Calvas.",
   "Keep your streak alive, President!": "¡Mantén viva tu racha, Presidente!",
   "Kite & Grill Master": "Maestro de Cometas y Parrillas",
   "Known Universe": "Universo Conocido",
