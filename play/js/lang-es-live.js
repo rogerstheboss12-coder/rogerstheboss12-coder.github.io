@@ -11,6 +11,7 @@ I18N.register('es', {
   "This item isn't available from Google Play right now. Please try again later.": "Este artículo no está disponible en Google Play en este momento. Inténtalo más tarde.",
   "This item isn't available from the App Store right now. Please try again later.": "Este artículo no está disponible en la App Store en este momento. Inténtalo más tarde.",
   "This one's on us, President!": "¡Esta corre por nuestra cuenta, Presidente!",
+  "George runs the stand while you're away. Want a ping when the treasury is full or your daily reward is ready? You can change this anytime in Settings.": "George atiende el puesto mientras no estás. ¿Quieres un aviso cuando el tesoro esté lleno o tu recompensa diaria esté lista? Puedes cambiarlo cuando quieras en Ajustes.",
   "Welcome back! Want a heads-up when your treasury is overflowing, your daily reward is ready or the Space Race is about to end? You can change this anytime in Settings.": "¡Bienvenido de nuevo! ¿Quieres un aviso cuando tu tesoro se desborde, tu recompensa diaria esté lista o la Carrera Espacial esté por terminar? Puedes cambiarlo cuando quieras en Ajustes.",
   "+ exclusive {kind}: {name}": "+ {kind} exclusivo: {name}",
   "+50% ★ from missions": "+50 % de ★ en las misiones",

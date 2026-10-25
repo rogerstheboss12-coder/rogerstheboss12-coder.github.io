@@ -433,7 +433,7 @@
     FX.toast(W().emoji || '🎉', T('Event rewards claimed!'), eventGainText(g));
     AN.track('event_tier', { n: g.n, badges: S.badges, ev: S.worlds[D.EVENT_INDEX].eventId });
     LVU.award('eventTier', g.n);
-    if (S.stats.eventTiers === g.n) maybeReview('eventTier');
+    maybeReview('eventTier'); // every manual claim is a happy moment; Live.shouldAskReview spaces the prompts
     if (root.GrowthUI) root.GrowthUI.offer('eventTier');
     LVU.announceCards(g.cards);
     announceSets(g.completed);
@@ -492,7 +492,8 @@
     LVU.announceCards(r.cards);
     AN.track('daily', { day: r.day, streak: S.daily.streak, double: !!double });
     LVU.award('daily');
-    if (S.daily.streak % 7 === 0) maybeReview('streak7');
+    if (S.daily.total === 3) maybeReview('daily3');
+    else if (S.daily.streak % 7 === 0) maybeReview('streak7');
     UI.refreshPanel(true); save(true);
   };
   ACT.claimDailyDouble = function () {
@@ -658,14 +659,34 @@
     setTimeout(function () { PL.requestReview(); }, 2500);
   }
 
-  // Offer reminders once, the first time a player comes back after being away for an hour or more.
-  var remindAskPending = false;
+  // Ad consent (Google UMP) and the iOS tracking prompt (ATT). Not at launch, where they covered the first tutorial
+  // step: once the player has opened the Hatchery (tutorial step 2), right away for returning players, or after
+  // 60 s of play at the latest. App Review once rejected us because reviewers couldn't find the ATT prompt, so it
+  // must still show early in a normal session. PL.initAds is idempotent, and PL.showRewardedAd runs it first too,
+  // so consent always comes before any ad request.
+  var adsInited = false;
+  function maybeInitAds() {
+    if (adsInited || !PL.native || !PL.adsAvailable()) return;
+    if (!S.tutorial.done && S.tutorial.step <= 2 && S.stats.playtime < 60) return;
+    adsInited = true;
+    PL.initAds();
+  }
+
+  // Offer reminders once (native only): shortly after the tutorial ends, or failing that the first time a
+  // player comes back after being away for an hour or more.
+  var remindAskPending = false, tutWasDone = null, remindAfterTutAt = 0;
   function maybeAskReminders() {
-    if (!remindAskPending || S.settings.notifications || S.live.seen.remindAsk || S.stats.playtime < 1800) return false;
+    if (tutWasDone === false && S.tutorial.done) remindAfterTutAt = Date.now() + 15000;
+    tutWasDone = S.tutorial.done;
+    var early = PL.native && remindAfterTutAt && Date.now() >= remindAfterTutAt;
+    if (S.settings.notifications || S.live.seen.remindAsk) return false;
+    if (!early && (!remindAskPending || S.stats.playtime < 1800)) return false;
     remindAskPending = false;
     S.live.seen.remindAsk = true;
-    AN.track('remind_ask', {});
-    UI.advisorDialog('washington', 'George Washingtun', T('Welcome back! Want a heads-up when your treasury is overflowing, your daily reward is ready or the Space Race is about to end? You can change this anytime in Settings.'),
+    AN.track('remind_ask', { early: early ? 1 : 0 });
+    var pitch = early ? T('George runs the stand while you\'re away. Want a ping when the treasury is full or your daily reward is ready? You can change this anytime in Settings.')
+      : T('Welcome back! Want a heads-up when your treasury is overflowing, your daily reward is ready or the Space Race is about to end? You can change this anytime in Settings.');
+    UI.advisorDialog('washington', 'George Washingtun', pitch,
       '<button class="btn blue" data-act="remindNo">' + tE('Not now') + '</button><button class="btn big" data-act="remindYes">🔔 ' + tE('Remind me') + '</button>', { title: '🔔 ' + tE('Reminders'), talking: true });
     return true;
   }
@@ -698,6 +719,7 @@
   ACT.rateItch = function () { AN.track('rate_click', {}); PL.openUrl(ITCH_URL); UI.closeAll(); };
 
   function checkTips() {
+    maybeInitAds();
     if (UI.anyModal() || document.querySelector('.cine') || TU.active()) return;
     if (maybeAskReminders()) return;
     if (maybeAskRating()) return;
@@ -717,6 +739,7 @@
   function startSpeech() {
     A.unlock();
     if (S.speechUntil - E.now() > 20 * 3600 * 1000) { FX.toast('🎤', T('The crowd needs a rest'), T('Speeches stack up to 24 hours.')); return; }
+    if (S.stats.speeches === 0) { runSpeech(); return; } // the tutorial's first speech is free, no ad
     withRewardedAd('speech', runSpeech);
   }
   function runSpeech() {
@@ -948,7 +971,7 @@
     if (!key || !S) return;
     AN.track('deeplink', { to: key });
     UI.closeAll();
-    if (key === 'invite') { var code = (/^starspangled:\/\/invite\/([a-z0-9]{6})/i.exec(url) || [])[1]; UI.open('campaign'); if (code) ACT.campaignEnter({ code: code.toUpperCase() }); return; }
+    if (key === 'invite') { var code = (/^starspangled:\/\/invite\/([a-z0-9]{6})/i.exec(url) || [])[1]; UI.open('invite'); if (code) ACT.campaignEnter({ code: code.toUpperCase() }); return; }
     if (key === 'event') { if (S.unlocked[D.EVENT_INDEX]) travel(D.EVENT_INDEX); else UI.open('worlds'); return; }
     if (['pass', 'race', 'orders', 'library', 'store', 'daily', 'missions', 'worlds', 'weekly', 'leagues', 'showdown', 'codex', 'debate', 'campaign'].indexOf(key) >= 0) UI.open(key);
   }
@@ -1136,8 +1159,6 @@
       PL.syncTime().then(function (v) { applyOffline(v); if (!lastOffline) maybeDaily(); });
       PL.initStore(D.IAP.map(function (p) { return p.id; }), onTransaction).then(function () { UI.refreshPanel(true); });
       raf(function (t) { last = t; raf(function (t2) { PL.hideSplash(); loop(t2); }); });
-      // Ask for ad consent and the iOS tracking permission at launch, before any ad data is collected (App Review 2.1).
-      if (PL.native && PL.adsAvailable()) setTimeout(PL.initAds, 1500);
       if (res.state && res.restoredFrom !== undefined) {
         save(true);
         setTimeout(function () { UI.modal(UI.head('🛟 ' + tE('Save recovered'), '') + '<div class="modal-body"><p>' + tE('Your save couldn\'t be read, so we restored your most recent backup ({time}). A little recent progress may be missing.', { time: res.restoredFrom ? new Date(res.restoredFrom).toLocaleString() : '—' }) + '</p><div class="dialog-actions"><button class="btn" data-act="close">' + tE('Keep playing') + '</button></div></div>', 'small'); }, 600);

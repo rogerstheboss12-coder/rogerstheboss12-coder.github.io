@@ -662,10 +662,11 @@
   function dayKey(t) { var d = new Date(t); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
   function dailyStatus(state, t) {
     t = t || now();
-    var today = dayKey(t), yesterday = dayKey(localMidnight(t) - DAY / 2);
+    var today = dayKey(t), yesterday = dayKey(localMidnight(t) - DAY / 2), dayBefore = dayKey(localMidnight(t) - DAY * 1.5);
     var dl = state.daily;
     var claimable = dl.lastDay !== today;
-    var streak = dl.lastDay === yesterday || dl.lastDay === today ? dl.streak : 0;
+    // Grace of one missed day: a claim two days ago still keeps the streak.
+    var streak = dl.lastDay === yesterday || dl.lastDay === today || dl.lastDay === dayBefore ? dl.streak : 0;
     var index = claimable ? streak % D.DAILY.length : (streak - 1 + D.DAILY.length) % D.DAILY.length;
     return { claimable: claimable, streak: streak, index: index, today: today };
   }

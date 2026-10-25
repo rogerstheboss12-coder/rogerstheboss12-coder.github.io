@@ -23,7 +23,7 @@
       done: function () { return root.UI.isOpen() === 'managers' || W0().biz[0].manager; }, allowModal: true },
     { text: 'Hire George Washingtun. He\'ll run the Flag Stand forever — even while you\'re away.', target: function () { return q('.modal [data-act=hire][data-i="0"]'); },
       done: function () { return W0().biz[0].manager; }, allowModal: true },
-    { text: 'Last tip: give a Stump Speech to double all profits for 4 hours. Go get \'em, President!', target: function () { return q('#speech-btn'); },
+    { text: 'Last tip: your first Stump Speech is on the house! It doubles all profits for 4 hours. Go get \'em, President!', target: function () { return q('#speech-btn'); },
       done: function () { return S.stats.speeches > 0; }, finalSkip: true }
   ];
 

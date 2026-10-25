@@ -242,20 +242,26 @@
       else if (g.done && g.over && !g.claimed && !goalPlayed(s)) body += '<p class="panel-note small center">' + tE('The reward goes to players who took part in Election Night.') + '</p>';
     }
     if (demo()) return { title: '🗳️ ' + tE('Campaign HQ'), sub: tE('Vote for President'), body: body + root.DemoUI.cta() };
-    // Invites
-    var inv = c.invite;
-    body += '<h3>🤝 ' + tE('Invite friends') + '</h3><p class="panel-note">' + tE('Share your code. When a friend enters it in their first {d} days, they get ★{b} and you get ★{a} (up to {m} friends).', { a: CFG.invite.friend, b: CFG.invite.newPlayer, m: CFG.invite.max, d: CFG.invite.redeemDays }) + '</p>';
+    body += '<h3>🤝 ' + tE('Invite friends') + '</h3>' + inviteBody(s, t);
+    return { title: '🗳️ ' + tE('Campaign HQ'), sub: tE('Vote for President · invite friends'), body: body };
+  };
+  // Standalone invite view (More → Invite friends): the same invite section, with no election content, so it
+  // keeps working after the race leaves the menu.
+  UI.PANELS.invite = function () {
+    return { title: '🤝 ' + tE('Invite friends'), sub: tE('★{n} for each friend who joins', { n: CFG.invite.friend }), body: inviteBody(S(), E.now()) };
+  };
+  function inviteBody(s, t) {
+    var inv = state(s).invite, body = '<p class="panel-note">' + tE('Share your code. When a friend enters it in their first {d} days, they get ★{b} and you get ★{a} (up to {m} friends).', { a: CFG.invite.friend, b: CFG.invite.newPlayer, m: CFG.invite.max, d: CFG.invite.redeemDays }) + '</p>';
     body += '<div class="settings-grid"><div class="setting"><span>' + tE('Your code') + '<small class="setting-sub">' + (inv.code ? '<b class="invite-code">' + esc(inv.code) + '</b> · ' + tE('{n}/{m} friends joined', { n: inv.friends, m: CFG.invite.max }) : tE('Connect to the internet to get your code.')) + '</small></span>' +
       (inv.code ? '<button class="btn blue sm" data-act="campaignShare">📤 ' + tE('Share') + '</button>' : '') + '</div>';
     if (inv.redeemed) body += '<div class="setting"><span>' + tE('Friend code used') + '<small class="setting-sub">' + esc(inv.redeemed) + '</small></span></div>';
     else if (canRedeem(s, t)) body += '<div class="setting"><span>' + tE('Got a friend\'s code?') + '<small class="setting-sub">' + tE('Enter it for ★{n}.', { n: CFG.invite.newPlayer }) + '</small></span><button class="btn blue sm" data-act="campaignEnter">' + tE('Enter code') + '</button></div>';
     body += '<div class="setting"><span>🎬 ' + tE('Code from our videos?') + '<small class="setting-sub">' + tE('Some of our videos end with a secret code worth up to ★{n}.', { n: CFG.promoMax }) + '</small></span><button class="btn blue sm" data-act="campaignEnter">' + tE('Enter code') + '</button></div>';
     body += '<div class="setting"><span>🖼️ ' + tE('Campaign poster') + '<small class="setting-sub">' + tE('Pick a portrait and a slogan, then share your poster.') + '</small></span><button class="btn blue sm" data-act="growthPoster">' + tE('Make poster') + '</button></div>';
-    body += '</div>';
-    return { title: '🗳️ ' + tE('Campaign HQ'), sub: tE('Vote for President · invite friends'), body: body };
-  };
+    return body + '</div>';
+  }
 
-  function refresh() { if (UI.isOpen() === 'campaign') UI.refreshPanel(true); }
+  function refresh() { var p = UI.isOpen(); if (p === 'campaign' || p === 'invite' || p === 'daily') UI.refreshPanel(true); }
 
   var ACTIONS = {
     campaignVote: function (d) {

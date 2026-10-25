@@ -207,12 +207,14 @@
 
   // ---------- Rating prompt ----------
   // Asked only at happy moments, after 30min+ of play, at most every 60 days and 3 times a year (iOS also caps it).
-  var REVIEW_MOMENTS = { raceWin: 1, launch: 1, streak7: 1, convention: 1, passTier10: 1, electionWin: 1, firstTravel: 1, eventTier: 1, debateWin: 1, communityGoal: 1 };
+  var REVIEW_MOMENTS = { raceWin: 1, launch: 1, streak7: 1, convention: 1, passTier10: 1, electionWin: 1, firstTravel: 1, eventTier: 1, debateWin: 1, communityGoal: 1, daily3: 1 };
+  // Early happy moments (3rd daily reward, an event tier claim) only need 10 min of play.
+  var EARLY_REVIEW_MOMENTS = { daily3: 1, eventTier: 1 };
   function shouldAskReview(state, moment, t) {
     t = t || now();
     var r = state.live.review;
     // Oct 22: 15 min of play and a 30-day gap (was 30 min / 60 days): the store page had 1 rating. Apple still caps the prompt at 3 a year.
-    if (!REVIEW_MOMENTS[moment] || state.stats.playtime < 900) return false;
+    if (!REVIEW_MOMENTS[moment] || state.stats.playtime < (EARLY_REVIEW_MOMENTS[moment] ? 600 : 900)) return false;
     if (r.last && t - r.last < 30 * DAY) return false;
     if (r.n >= 3 && r.last && t - r.last < 365 * DAY) return false;
     return true;

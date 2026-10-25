@@ -332,7 +332,8 @@
   }
   // Resolves 'earned' (reward earned), 'nofill' (no ad could be loaded or shown) or 'dismissed'
   // (closed before the reward). On web, simulates a short "ad".
-  // Consent (UMP) and the iOS tracking prompt run from initAds(), which main.js calls shortly after launch.
+  // Consent (UMP) and the iOS tracking prompt run from initAds() (idempotent), which main.js calls early in the first
+  // session (see maybeInitAds) and which runs again here first, so consent always precedes any ad request.
   function showRewardedAd(placement) {
     var ad = plugin('AdMob');
     if (DEMO) return Promise.resolve('unavailable');

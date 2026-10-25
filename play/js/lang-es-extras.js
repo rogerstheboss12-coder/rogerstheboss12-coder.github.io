@@ -606,13 +606,15 @@ I18N.register('es', {
 
 /* 1.1.4: invites, share cards, campaign posters, win-back memos, rating row, browser "free on the App Store" card. */
 I18N.register('es', {
-  "Build a ridiculous political empire with me in Star-Spangled Tycoon! Enter my code in Campaign HQ for ★{n} free.": "¡Construye conmigo un imperio político ridículo en Star-Spangled Tycoon! Introduce mi código en el Cuartel de Campaña y recibe ★{n} gratis.",
-  "Breaking news from my parody political empire in Star-Spangled Tycoon! Enter my code in Campaign HQ for ★{n} free.": "¡Última hora desde mi imperio político de parodia en Star-Spangled Tycoon! Introduce mi código en el Cuartel de Campaña y recibe ★{n} gratis.",
-  "My parody campaign poster, made in Star-Spangled Tycoon. Enter my code in Campaign HQ for ★{n} free.": "Mi cartel de campaña de parodia, hecho en Star-Spangled Tycoon. Introduce mi código en el Cuartel de Campaña y recibe ★{n} gratis.",
+  "Build a ridiculous political empire with me in Star-Spangled Tycoon! Use my code {code} for ★{n} free.": "¡Construye conmigo un imperio político ridículo en Star-Spangled Tycoon! Usa mi código {code} y gana ★{n} gratis.",
+  "Breaking news from my parody political empire in Star-Spangled Tycoon! Use my code {code} for ★{n} free.": "¡Última hora desde mi imperio político de parodia en Star-Spangled Tycoon! Usa mi código {code} y gana ★{n} gratis.",
+  "My parody campaign poster, made in Star-Spangled Tycoon. Use my code {code} for ★{n} free.": "Mi cartel de campaña de parodia, hecho en Star-Spangled Tycoon. Usa mi código {code} y gana ★{n} gratis.",
   "Build a ridiculous political empire with me in Star-Spangled Tycoon!": "¡Construye conmigo un imperio político ridículo en Star-Spangled Tycoon!",
   "Breaking news from my parody political empire in Star-Spangled Tycoon!": "¡Última hora desde mi imperio político de parodia en Star-Spangled Tycoon!",
   "My parody campaign poster, made in Star-Spangled Tycoon.": "Mi cartel de campaña de parodia, hecho en Star-Spangled Tycoon.",
   "Code: {code}": "Código: {code}",
+  "Invite friends: ★{n} each": "Invita a amigos: ★{n} por cada uno",
+  "★{n} for each friend who joins": "★{n} por cada amigo que se una",
   "{name} Wins in a Landslide; Opponent Demands a Recount of the Recount": "{name} arrasa en las urnas; su rival exige recontar el recuento",
   "Election #{n}: {name} Wins, Credits \"Free Fireworks\" Platform": "Elección n.º {n}: gana {name} gracias a su programa de «fuegos artificiales gratis»",
   "{name} Sweeps {world}; Pundits Run Out of Adjectives": "{name} arrasa en {world}; a los analistas se les acaban los adjetivos",

@@ -74,6 +74,8 @@
   }
   function moreItems() {
     var s = S(), out = [['campaign', '🗳️', 'Campaign HQ'], ['weekly', '🗓️', 'Weekly Goals'], ['leagues', '🏅', 'Leaderboards']];
+    // Permanent invite entry (outlives the election content in Campaign HQ).
+    if (root.Campaign && !(root.BUILD && root.BUILD.demo)) out.unshift(['invite', '🤝', T('Invite friends: ★{n} each', { n: root.Campaign.CFG.invite.friend })]);
     if (X.debateUnlocked(s)) out.push(['debate', '🎙️', 'Debates']);
     if (L.unlocked(s, 'race')) out.push(['showdown', '⚔️', 'Showdown']);
     out.push(['codex', '📖', 'Codex']);

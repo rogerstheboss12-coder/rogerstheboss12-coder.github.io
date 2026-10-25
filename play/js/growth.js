@@ -19,11 +19,11 @@
     return g;
   }
 
-  // ---------- Share text: the code gets its own line so it survives the trip through the App Store ----------
+  // ---------- Share text: the code is in the caption itself and again on its own line, so it survives the trip through the App Store ----------
   var SHARE_LINES = {
-    invite: 'Build a ridiculous political empire with me in Star-Spangled Tycoon! Enter my code in Campaign HQ for ★{n} free.',
-    card: 'Breaking news from my parody political empire in Star-Spangled Tycoon! Enter my code in Campaign HQ for ★{n} free.',
-    poster: 'My parody campaign poster, made in Star-Spangled Tycoon. Enter my code in Campaign HQ for ★{n} free.'
+    invite: 'Build a ridiculous political empire with me in Star-Spangled Tycoon! Use my code {code} for ★{n} free.',
+    card: 'Breaking news from my parody political empire in Star-Spangled Tycoon! Use my code {code} for ★{n} free.',
+    poster: 'My parody campaign poster, made in Star-Spangled Tycoon. Use my code {code} for ★{n} free.'
   };
   var SHARE_NOCODE = {
     invite: 'Build a ridiculous political empire with me in Star-Spangled Tycoon!',
@@ -32,7 +32,7 @@
   };
   function shareText(kind, code, url, bonus) {
     kind = SHARE_LINES[kind] ? kind : 'card';
-    var lines = [code ? T(SHARE_LINES[kind], { n: bonus }) : T(SHARE_NOCODE[kind])];
+    var lines = [code ? T(SHARE_LINES[kind], { n: bonus, code: code }) : T(SHARE_NOCODE[kind])];
     if (code) lines.push(T('Code: {code}', { code: code }));
     lines.push(url || APP_STORE);
     return lines.join('\n');

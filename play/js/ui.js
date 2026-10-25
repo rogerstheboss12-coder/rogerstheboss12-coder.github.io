@@ -775,7 +775,7 @@
 
   PANELS.daily = function () {
     var st = E.dailyStatus(S);
-    var body = '<p class="panel-note">' + tE('Log in every day to climb the 7-day reward ladder. Miss a day and the streak starts over.') + '</p><div class="daily-grid">';
+    var body = '<p class="panel-note">' + tE('Log in every day to climb the 7-day reward ladder. Miss two days in a row and the streak starts over.') + '</p><div class="daily-grid">';
     body += D.DAILY.map(function (r, k) {
       var claimedIdx = st.claimable ? st.index - 1 : st.index;
       var cls = k <= claimedIdx && st.streak > 0 ? 'got' : (st.claimable && k === st.index ? 'today' : '');
@@ -785,6 +785,9 @@
     body += '<div class="center-cta"><button class="btn gold big" data-act="claimDaily" ' + (st.claimable ? '' : 'disabled') + '>' + (st.claimable ? tE('Claim Day {n}', { n: st.index + 1 }) : tE('Come back tomorrow!')) + '</button>' +
       (dd ? ' <button class="btn blue big" data-act="claimDailyDouble">' + (S.iap.founding ? '' : '▶ ') + tE('Claim ×2') + '</button>' : '') +
       '<p class="panel-note center">' + tE('Current streak: {n} days', { n: st.streak }) + '</p></div>';
+    // New players (first 14 days, no friend code yet): a way in to the invite redeem flow.
+    var C = root.Campaign;
+    if (C && !(root.BUILD && root.BUILD.demo) && C.canRedeem(S, E.now())) body += '<div class="settings-grid"><div class="setting"><span>🤝 ' + tE('Got a friend\'s code?') + '<small class="setting-sub">' + tE('Enter it for ★{n}.', { n: C.CFG.invite.newPlayer }) + '</small></span><button class="btn blue sm" data-act="campaignEnter">' + tE('Enter code') + '</button></div></div>';
     return { title: '📅 ' + tE('Daily Reward'), sub: '', body: body };
   };
   function dailyLabel(r) {
